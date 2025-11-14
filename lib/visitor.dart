@@ -48,7 +48,9 @@ class Visitor extends SimpleAstVisitor<void> {
       return;
     }
 
-    if (hasExplicitType && prefixElement.isRelaxingType(declaredType)) {
+    if (hasExplicitType &&
+        prefixType != declaredType &&
+        context.typeSystem.isAssignableTo(prefixType, declaredType)) {
       return;
     }
 
@@ -118,9 +120,9 @@ class Visitor extends SimpleAstVisitor<void> {
 
       final prefixType = prefixElement.thisType;
       final parameterBaseType = _getNonNullableType(parameterType);
-      final expressionBaseType = _getNonNullableType(expressionType);
 
-      if (expressionBaseType == prefixType && parameterBaseType == prefixType) {
+      if (parameterBaseType == prefixType &&
+          context.typeSystem.isAssignableTo(expressionType, parameterType)) {
         rule.reportAtNode(expression);
       }
     }
@@ -173,15 +175,6 @@ class Visitor extends SimpleAstVisitor<void> {
 }
 
 extension on InterfaceElement {
-  bool isRelaxingType(DartType declaredType) => switch (declaredType) {
-    InterfaceType type
-        when type != thisType &&
-            thisType.asInstanceOf(type.element) != null &&
-            type.asInstanceOf(this) == null =>
-      true,
-    _ => false,
-  };
-
   bool isPrefixType(DartType? staticType) => switch (staticType) {
     null => false,
     final type when type == thisType => true,
