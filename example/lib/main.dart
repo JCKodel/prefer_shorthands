@@ -16,7 +16,7 @@ void main() {
   };
   test(A.b(), b: B.createB());
   final j = C(A.b(), B.createB());
-  final k = C.named(B.createB(), b: .createB());
+  final k = C.named(B.createB(), b: A.defaultB);
   print([string, a, b, c, d, e, f, g, h, i, j, k, enumList, enumItem]);
 }
 
@@ -42,7 +42,7 @@ class B extends A {
 
 class C {
   const C(A a, [B? b]);
-  const C.named(A a, {B? b});
+  const C.named(A a, {A? b});
 }
 
 enum EnumA { a, b }

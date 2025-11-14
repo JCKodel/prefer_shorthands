@@ -1,3 +1,7 @@
+## 0.3.0
+
+- Fix case `borderRadius: BorderRadius.all(.circular(16)),`
+
 ## 0.2.0
 
 - Fix case:
