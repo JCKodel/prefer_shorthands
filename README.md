@@ -1,39 +1,14 @@
-<!-- 
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# prefer_shorthands
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages). 
+[![pub package](https://img.shields.io/pub/v/prefer_shorthands.svg)](https://pub.dev/packages/prefer_shorthands)
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages). 
--->
+> ⚡ **Warning and quick-fix.** Enjoy it! ✨
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+## Learn More
 
-## Features
+To learn more about Dart's dot shorthand syntax, check out the official documentation: [Dot shorthands - Dart](https://dart.dev/language/dot-shorthands)
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+## Feedback
 
-## Getting started
+If you encounter any issues while using this package, please feel free to report them on [GitHub Issues](https://github.com/huanghui1998hhh/prefer_shorthands/issues).
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder. 
-
-```dart
-const like = 'sample';
-```
-
-## Additional information
-
-TODO: Tell users more about the package: where to find more information, how to 
-contribute to the package, how to file issues, what response they can expect 
-from the package authors, and more.
