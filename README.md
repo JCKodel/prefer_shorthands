@@ -10,7 +10,7 @@ To use this analyzer plugin, add it to your `analysis_options.yaml` file at the 
 
 ```yaml
 plugins:
-  prefer_shorthands: ^0.0.1
+  prefer_shorthands: ^0.1.0
 ```
 
 After adding the plugin, restart the Dart Analysis Server (in VS Code: press `Cmd+Shift+P` and select "Dart: Restart Analysis Server", or in IntelliJ/Android Studio: click the "Restart Dart Analysis Server" button in the toolbar).
@@ -22,4 +22,3 @@ To learn more about Dart's dot shorthand syntax, check out the official document
 ## Feedback
 
 If you encounter any issues while using this package, please feel free to report them on [GitHub Issues](https://github.com/huanghui1998hhh/prefer_shorthands/issues).
-
