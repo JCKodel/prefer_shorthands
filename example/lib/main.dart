@@ -16,7 +16,7 @@ void main() {
   };
   test(A.b(), b: B.createB());
   final j = C(A.b(), B.createB());
-  final k = C.named(.b(), b: .createB());
+  final k = C.named(B.createB(), b: .createB());
   print([string, a, b, c, d, e, f, g, h, i, j, k, enumList, enumItem]);
 }
 
