@@ -61,6 +61,51 @@ class _Visitor extends SimpleAstVisitor<void> {
 
   _Visitor(this.rule, this.context);
 
+  bool _isRelaxingType({
+    required InterfaceElement prefixElement,
+    required DartType declaredType,
+  }) {
+    if (declaredType is! InterfaceType) return false;
+
+    final prefixType = prefixElement.thisType;
+    if (prefixType == declaredType) return false;
+
+    return prefixType.asInstanceOf(declaredType.element) != null &&
+        declaredType.asInstanceOf(prefixElement) == null;
+  }
+
+  void _checkAndReport({
+    required Expression expression,
+    required DartType? staticType,
+    required DartType declaredType,
+    required InterfaceElement prefixElement,
+    required bool hasExplicitType,
+  }) {
+    if (staticType == null) return;
+
+    if (declaredType.getDisplayString() != staticType.getDisplayString()) {
+      return;
+    }
+
+    final prefixType = prefixElement.thisType;
+
+    if (staticType != prefixType &&
+        (staticType is! InterfaceType ||
+            staticType.asInstanceOf(prefixElement) == null)) {
+      return;
+    }
+
+    if (hasExplicitType &&
+        _isRelaxingType(
+          prefixElement: prefixElement,
+          declaredType: declaredType,
+        )) {
+      return;
+    }
+
+    rule.reportAtNode(expression);
+  }
+
   @override
   void visitVariableDeclaration(VariableDeclaration node) {
     final initializer = node.initializer;
@@ -81,119 +126,64 @@ class _Visitor extends SimpleAstVisitor<void> {
 
     if (initializer is InstanceCreationExpression) {
       final constructorName = initializer.constructorName.name?.name;
-      if (constructorName == null || constructorName == 'new') {
-        return;
-      }
+      if (constructorName == null || constructorName == 'new') return;
 
       final constructorType = initializer.staticType;
+      if (constructorType is! InterfaceType) return;
 
-      if (constructorType != null &&
-          declaredType.getDisplayString() ==
-              constructorType.getDisplayString()) {
-        if (hasExplicitType && constructorType is InterfaceType) {
-          final typeElement = constructorType.element;
-          final prefixType = typeElement.thisType;
-
-          if (declaredType is InterfaceType && prefixType != declaredType) {
-            if (prefixType.asInstanceOf(declaredType.element) != null &&
-                declaredType.asInstanceOf(typeElement) == null) {
-              return;
-            }
-          }
-        }
-
-        rule.reportAtNode(node.initializer!);
-      }
+      _checkAndReport(
+        expression: initializer,
+        staticType: constructorType,
+        declaredType: declaredType,
+        prefixElement: constructorType.element,
+        hasExplicitType: hasExplicitType,
+      );
     }
 
     if (initializer is PropertyAccess) {
       final target = initializer.target;
-
       if (target is! SimpleIdentifier) return;
-
-      final staticType = initializer.staticType;
-      if (staticType != null &&
-          declaredType.getDisplayString() == staticType.getDisplayString()) {
-        if (hasExplicitType) {
-          final targetElement = target.element;
-          if (targetElement is InterfaceElement &&
-              declaredType is InterfaceType) {
-            final prefixType = targetElement.thisType;
-
-            if (prefixType != declaredType) {
-              if (prefixType.asInstanceOf(declaredType.element) != null &&
-                  declaredType.asInstanceOf(targetElement) == null) {
-                return;
-              }
-            }
-          }
-        }
-
-        rule.reportAtNode(node.initializer!);
-      }
-    }
-
-    if (initializer is PrefixedIdentifier) {
-      final prefix = initializer.prefix;
-      final staticType = initializer.staticType;
-
-      final prefixElement = prefix.element;
-      if (prefixElement == null) return;
-      if (prefixElement is! InterfaceElement) return;
-
-      if (staticType != null &&
-          declaredType.getDisplayString() == staticType.getDisplayString()) {
-        final prefixType = prefixElement.thisType;
-
-        if (staticType == prefixType ||
-            (staticType is InterfaceType &&
-                staticType.asInstanceOf(prefixElement) != null)) {
-          if (hasExplicitType && declaredType is InterfaceType) {
-            final prefixType = prefixElement.thisType;
-            if (prefixType != declaredType) {
-              if (prefixType.asInstanceOf(declaredType.element) != null &&
-                  declaredType.asInstanceOf(prefixElement) == null) {
-                return;
-              }
-            }
-          }
-
-          rule.reportAtNode(node.initializer!);
-        }
-      }
-    }
-
-    if (initializer is MethodInvocation) {
-      final target = initializer.target;
-
-      if (target is! SimpleIdentifier) return;
-
-      final staticType = initializer.staticType;
-      if (staticType == null) return;
-
-      if (declaredType.getDisplayString() != staticType.getDisplayString()) {
-        return;
-      }
 
       final targetElement = target.element;
       if (targetElement is! InterfaceElement) return;
 
-      final prefixType = targetElement.thisType;
+      _checkAndReport(
+        expression: initializer,
+        staticType: initializer.staticType,
+        declaredType: declaredType,
+        prefixElement: targetElement,
+        hasExplicitType: hasExplicitType,
+      );
+    }
 
-      if (staticType == prefixType ||
-          (staticType is InterfaceType &&
-              staticType.asInstanceOf(targetElement) != null)) {
-        if (hasExplicitType && declaredType is InterfaceType) {
-          if (prefixType != declaredType) {
-            if (prefixType.asInstanceOf(declaredType.element) != null &&
-                declaredType.asInstanceOf(targetElement) == null) {
-              return;
-            }
-          }
-        }
+    if (initializer is PrefixedIdentifier) {
+      final prefix = initializer.prefix;
+      final prefixElement = prefix.element;
+      if (prefixElement is! InterfaceElement) return;
 
-        rule.reportAtNode(node.initializer!);
-      }
+      _checkAndReport(
+        expression: initializer,
+        staticType: initializer.staticType,
+        declaredType: declaredType,
+        prefixElement: prefixElement,
+        hasExplicitType: hasExplicitType,
+      );
+    }
+
+    if (initializer is MethodInvocation) {
+      final target = initializer.target;
+      if (target is! SimpleIdentifier) return;
+
+      final targetElement = target.element;
+      if (targetElement is! InterfaceElement) return;
+
+      _checkAndReport(
+        expression: initializer,
+        staticType: initializer.staticType,
+        declaredType: declaredType,
+        prefixElement: targetElement,
+        hasExplicitType: hasExplicitType,
+      );
     }
   }
 
@@ -207,22 +197,16 @@ class _Visitor extends SimpleAstVisitor<void> {
       return;
     }
 
-    if (expression is! PrefixedIdentifier) {
-      return;
-    }
+    if (expression is! PrefixedIdentifier) return;
 
-    final prefixedId = expression;
-    final prefix = prefixedId.prefix;
-    final staticType = prefixedId.staticType;
-
+    final prefix = expression.prefix;
     final prefixElement = prefix.element;
-    if (prefixElement == null) return;
-
     if (prefixElement is! InterfaceElement) return;
 
-    final prefixType = prefixElement.thisType;
-
+    final staticType = expression.staticType;
     if (staticType == null) return;
+
+    final prefixType = prefixElement.thisType;
 
     if (staticType == prefixType ||
         (staticType is InterfaceType &&
@@ -247,6 +231,30 @@ class ConvertToShorthand extends ResolvedCorrectionProducer {
 
   @override
   FixKind get fixKind => _convertToShorthandKind;
+
+  Future<void> _applyFix({
+    required ChangeBuilder builder,
+    required VariableDeclarationList variableList,
+    required bool hasExplicitType,
+    required DartType? staticType,
+    required AstNode nodeToDelete,
+  }) async {
+    if (staticType == null) return;
+
+    await builder.addDartFileEdit(file, (builder) {
+      if (!hasExplicitType) {
+        final keyword = variableList.keyword;
+        if (keyword != null) {
+          builder.addSimpleInsertion(
+            keyword.end,
+            ' ${staticType.getDisplayString()}',
+          );
+        }
+      }
+
+      builder.addDeletion(range.node(nodeToDelete));
+    });
+  }
 
   @override
   Future<void> compute(ChangeBuilder builder) async {
@@ -276,84 +284,51 @@ class ConvertToShorthand extends ResolvedCorrectionProducer {
     if (errorNode is InstanceCreationExpression) {
       final constructorName = errorNode.constructorName;
       final typeNode = constructorName.type;
-      final constructorNameNode = constructorName.name;
-      final staticType = errorNode.staticType;
+      if (constructorName.name == null) return;
 
-      if (constructorNameNode == null || staticType == null) return;
-
-      await builder.addDartFileEdit(file, (builder) {
-        if (!hasExplicitType) {
-          final keyword = variableList.keyword;
-          if (keyword != null) {
-            builder.addSimpleInsertion(
-              keyword.end,
-              ' ${staticType.getDisplayString()}',
-            );
-          }
-        }
-
-        builder.addDeletion(range.node(typeNode));
-      });
+      await _applyFix(
+        builder: builder,
+        variableList: variableList,
+        hasExplicitType: hasExplicitType,
+        staticType: errorNode.staticType,
+        nodeToDelete: typeNode,
+      );
     }
 
     if (errorNode is PropertyAccess) {
       final target = errorNode.target;
-      final staticType = errorNode.staticType;
-      if (target != null && staticType != null) {
-        await builder.addDartFileEdit(file, (builder) {
-          if (!hasExplicitType) {
-            final keyword = variableList.keyword;
-            if (keyword != null) {
-              builder.addSimpleInsertion(
-                keyword.end,
-                ' ${staticType.getDisplayString()}',
-              );
-            }
-          }
+      if (target == null) return;
 
-          builder.addDeletion(range.node(target));
-        });
-      }
+      await _applyFix(
+        builder: builder,
+        variableList: variableList,
+        hasExplicitType: hasExplicitType,
+        staticType: errorNode.staticType,
+        nodeToDelete: target,
+      );
     }
 
     if (errorNode is PrefixedIdentifier) {
-      final prefix = errorNode.prefix;
-      final staticType = errorNode.staticType;
-      if (staticType != null) {
-        await builder.addDartFileEdit(file, (builder) {
-          if (!hasExplicitType) {
-            final keyword = variableList.keyword;
-            if (keyword != null) {
-              builder.addSimpleInsertion(
-                keyword.end,
-                ' ${staticType.getDisplayString()}',
-              );
-            }
-          }
-
-          builder.addDeletion(range.node(prefix));
-        });
-      }
+      await _applyFix(
+        builder: builder,
+        variableList: variableList,
+        hasExplicitType: hasExplicitType,
+        staticType: errorNode.staticType,
+        nodeToDelete: errorNode.prefix,
+      );
     }
 
     if (errorNode is MethodInvocation) {
       final target = errorNode.target;
-      final staticType = errorNode.staticType;
-      if (target != null && staticType != null) {
-        await builder.addDartFileEdit(file, (builder) {
-          if (!hasExplicitType) {
-            final keyword = variableList.keyword;
-            if (keyword != null) {
-              builder.addSimpleInsertion(
-                keyword.end,
-                ' ${staticType.getDisplayString()}',
-              );
-            }
-          }
+      if (target == null) return;
 
-          builder.addDeletion(range.node(target));
-        });
-      }
+      await _applyFix(
+        builder: builder,
+        variableList: variableList,
+        hasExplicitType: hasExplicitType,
+        staticType: errorNode.staticType,
+        nodeToDelete: target,
+      );
     }
   }
 }
