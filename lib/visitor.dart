@@ -124,6 +124,15 @@ class Visitor extends SimpleAstVisitor<void> {
       if (parameterBaseType == prefixType &&
           context.typeSystem.isAssignableTo(expressionType, parameterType)) {
         rule.reportAtNode(expression);
+        continue;
+      }
+
+      if (_shouldUseShorthandForFactoryRedirect(
+        expression,
+        prefixElement,
+        parameterBaseType,
+      )) {
+        rule.reportAtNode(expression);
       }
     }
   }
@@ -172,6 +181,38 @@ class Visitor extends SimpleAstVisitor<void> {
     }
     return context.typeSystem.promoteToNonNull(type);
   }
+
+  bool _shouldUseShorthandForFactoryRedirect(
+    Expression expression,
+    InterfaceElement prefixElement,
+    DartType parameterBaseType,
+  ) {
+    if (parameterBaseType is! InterfaceType) return false;
+
+    final parameterElement = parameterBaseType.element;
+
+    if (!context.typeSystem.isAssignableTo(
+      prefixElement.thisType,
+      parameterBaseType,
+    )) {
+      return false;
+    }
+
+    final constructorName = expression.constructorNameIfInstanceCreation;
+    if (constructorName == null) return false;
+
+    final parentConstructor = parameterElement.getConstructorByNameOrNull(
+      constructorName,
+    );
+    if (parentConstructor == null) return false;
+
+    if (!parentConstructor.isFactory) return false;
+
+    final redirectedConstructor = parentConstructor.redirectedConstructor;
+    if (redirectedConstructor == null) return false;
+
+    return redirectedConstructor.enclosingElement == prefixElement;
+  }
 }
 
 extension on InterfaceElement {
@@ -181,9 +222,20 @@ extension on InterfaceElement {
     InterfaceType type when type.asInstanceOf(this) != null => true,
     _ => false,
   };
+
+  ConstructorElement? getConstructorByNameOrNull(String constructorName) =>
+      constructors.where((c) => c.name == constructorName).firstOrNull;
 }
 
 extension on Expression {
+  String? get constructorNameIfInstanceCreation => switch (this) {
+    InstanceCreationExpression(
+      constructorName: ConstructorName(name: final name),
+    ) =>
+      name?.name,
+    _ => null,
+  };
+
   bool get isDotShorthand => switch (this) {
     DotShorthandConstructorInvocation() ||
     DotShorthandPropertyAccess() ||

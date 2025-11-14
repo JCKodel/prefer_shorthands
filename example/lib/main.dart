@@ -16,14 +16,14 @@ void main() {
   };
   test(A.b(), b: B.createB());
   final j = C(A.b(), B.createB());
-  final k = C.named(B.createB(), b: A.defaultB);
+  final k = C.named(B.createB(), b: B.b());
   print([string, a, b, c, d, e, f, g, h, i, j, k, enumList, enumItem]);
 }
 
 class A {
   const A();
 
-  const factory A.b() = B;
+  const factory A.b() = B.b;
 
   const A.c();
 
@@ -36,6 +36,8 @@ void test(A a, {B? b}) {}
 
 class B extends A {
   const B();
+
+  const B.b();
 
   static B createB() => const B();
 }
