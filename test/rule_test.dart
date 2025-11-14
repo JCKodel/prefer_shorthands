@@ -9,6 +9,7 @@ void main() {
   });
 }
 
+// TODO: test not working yet, because i can't find a API to register the rule
 @reflectiveTest
 class PreferShorthandsRuleTest extends AnalysisRuleTest {
   @override

@@ -14,8 +14,10 @@ void main() {
     EnumA.a => 1,
     EnumA.b => 2,
   };
-
-  print([string, a, b, c, d, e, f, g, h, i, enumList, enumItem]);
+  test(A.b(), b: B.createB());
+  final j = C(A.b(), B.createB());
+  final k = C.named(.b(), b: .createB());
+  print([string, a, b, c, d, e, f, g, h, i, j, k, enumList, enumItem]);
 }
 
 class A {
@@ -30,10 +32,17 @@ class A {
   static const defaultA = A();
 }
 
+void test(A a, {B? b}) {}
+
 class B extends A {
   const B();
 
   static B createB() => const B();
+}
+
+class C {
+  const C(A a, [B? b]);
+  const C.named(A a, {B? b});
 }
 
 enum EnumA { a, b }

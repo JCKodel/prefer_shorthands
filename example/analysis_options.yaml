@@ -3,3 +3,6 @@ include: package:lints/recommended.yaml
 plugins:
   prefer_shorthands:
     path: ../
+
+prefer_shorthands:
+  convert_implicit_declaration: true #not working yet
