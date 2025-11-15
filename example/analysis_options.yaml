@@ -5,4 +5,4 @@ plugins:
     path: ../
 
 prefer_shorthands:
-  convert_implicit_declaration: true #not working yet
+  convert_implicit_declaration: true

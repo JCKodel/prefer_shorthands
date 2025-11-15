@@ -6,7 +6,7 @@
 
 <!-- -->
 
-> ⚠️ **Warning:** Due to issues with `analysis_server_plugin` and related foundational packages, tests cannot be written at this time, which means there may be many missing cases and other unknown issues.
+> ⚠️ **Warning:** Due to issues with `analysis_server_plugin` and related foundational packages, tests cannot be written at this time, which means there may be many missing cases and other unknown issues .
 
 ## Usage
 
@@ -14,10 +14,23 @@ To use this analyzer plugin, add it to your `analysis_options.yaml` file at the 
 
 ```yaml
 plugins:
-  prefer_shorthands: ^0.3.0+1
+  prefer_shorthands: ^0.3.1
 ```
 
 After adding the plugin, restart the Dart Analysis Server (in VS Code: press `Cmd+Shift+P` and select "Dart: Restart Analysis Server", or in IntelliJ/Android Studio: click the "Restart Dart Analysis Server" button in the toolbar).
+
+## Settings
+
+Add like this in your project `analysis_options.yaml`:
+
+```yaml
+prefer_shorthands:
+  convert_implicit_declaration: true
+```
+
+|Paramenter|Default Value|Warning Code|Fix Result|
+|----------|:-----------:|:----------:|:--------:|
+|convert_implicit_declaration|false|`final a = String.fromCharCode(96);`|`final String a = .fromCharCode(96);`|
 
 ## Learn More
 
