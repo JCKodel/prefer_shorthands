@@ -3,12 +3,16 @@ import 'dart:io';
 import 'package:yaml/yaml.dart';
 
 class Settings {
-  static Future<Settings> loadFromAnalysisOptions() async {
-    final file = File('analysis_options.yaml');
+  static Settings loadFromAnalysisOptions([String? rootPath]) {
+    final file = File(
+      rootPath == null
+          ? 'analysis_options.yaml'
+          : '$rootPath${Platform.pathSeparator}analysis_options.yaml',
+    );
     if (!file.existsSync()) {
       return const Settings();
     }
-    final contents = await file.readAsString();
+    final contents = file.readAsStringSync();
     final yaml = loadYaml(contents);
     final preferShorthands = yaml['prefer_shorthands'];
     if (preferShorthands is! YamlMap) {

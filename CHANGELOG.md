@@ -1,3 +1,7 @@
+## 0.3.1
+
+- Support settings `convert_implicit_declaration`, defaults to `false`.
+
 ## 0.3.0+1
 
 - Fix.
@@ -12,7 +16,7 @@
 
 ```dart
 class Animal {}
-class Dog {
+class Dog extends Animal{
     static Dog husky() => ...;
 }
 

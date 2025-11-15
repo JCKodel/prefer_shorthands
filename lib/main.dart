@@ -17,12 +17,11 @@ class PreferShorthandsPlugin extends Plugin {
   @override
   String get name => 'prefer_shorthands';
 
-  late final Settings settings;
+  Settings? _settings;
+  Settings get settings => _settings!;
 
   @override
   Future<void> register(PluginRegistry registry) async {
-    settings = await Settings.loadFromAnalysisOptions();
-    stderr.writeln('[Prefer Shorthands] Settings: $settings');
     registry.registerWarningRule(PreferShorthandsRule());
     registry.registerFixForRule(
       PreferShorthandsRule.code,
@@ -49,6 +48,15 @@ class PreferShorthandsRule extends AnalysisRule {
     RuleVisitorRegistry registry,
     RuleContext context,
   ) {
+    // due to dart analysis server do not running in the project root
+    // here is a workaround to get the settings
+    if (plugin._settings == null) {
+      plugin._settings = Settings.loadFromAnalysisOptions(
+        context.package?.root.path,
+      );
+      stderr.writeln('[Prefer Shorthands] Settings: ${plugin.settings}');
+    }
+
     Visitor(this, context).registerNodeProcessors(registry, this);
   }
 }
