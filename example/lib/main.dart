@@ -1,6 +1,6 @@
 void main() {
   final string = String.fromCharCode(96);
-  final a = A();
+  var a = A();
   final b = A.defaultA;
   final d = A.b();
   final c = A.c();
@@ -17,6 +17,7 @@ void main() {
   test(A.b(), b: B.createB());
   final j = C(A.b(), B.createB());
   final k = C.named(B.createB(), b: B.b());
+  a = A.c();
   print([string, a, b, c, d, e, f, g, h, i, j, k, enumList, enumItem]);
 }
 

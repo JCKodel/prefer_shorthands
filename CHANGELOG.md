@@ -1,3 +1,20 @@
+## 0.3.2
+
+- Fix quick-fix case:
+
+```dart
+class Animal {
+    static Dog dog => ...;
+}
+class Dog extends Animal{}
+
+void main() {
+    final animal = Animal.dog; // wrong quick-fix to `final Dog animal = .dog;`
+}
+```
+
+- The assignment behavior will now be correctly detected.
+
 ## 0.3.1
 
 - Support settings `convert_implicit_declaration`, defaults to `false`.

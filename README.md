@@ -2,11 +2,11 @@
 
 [![pub package](https://img.shields.io/pub/v/prefer_shorthands.svg)](https://pub.dev/packages/prefer_shorthands)
 
-> ⚡ **Linter and Quick-fix.** Enjoy it! ✨
+> ⚡ **Linter** and **Quick-fix**. Enjoy it! ✨
 
 <!-- -->
 
-> ⚠️ **Warning:** Due to issues with `analysis_server_plugin` and related foundational packages, tests cannot be written at this time, which means there may be many missing cases and other unknown issues .
+> ⚠️ **Warning:** There may be some missing cases and other unknown issues. Welcome to [report an issue](https://github.com/huanghui1998hhh/prefer_shorthands/issues).
 
 ## Usage
 
@@ -14,7 +14,7 @@ To use this analyzer plugin, add it to your `analysis_options.yaml` file at the 
 
 ```yaml
 plugins:
-  prefer_shorthands: ^0.3.1
+  prefer_shorthands: ^0.3.2
 ```
 
 After adding the plugin, restart the Dart Analysis Server (in VS Code: press `Cmd+Shift+P` and select "Dart: Restart Analysis Server", or in IntelliJ/Android Studio: click the "Restart Dart Analysis Server" button in the toolbar).

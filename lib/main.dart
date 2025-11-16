@@ -6,6 +6,7 @@ import 'package:analyzer/analysis_rule/analysis_rule.dart';
 import 'package:analyzer/analysis_rule/rule_context.dart';
 import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
 import 'package:analyzer/error/error.dart';
+import 'package:meta/meta.dart';
 
 import 'producer.dart';
 import 'settings.dart';
@@ -18,6 +19,11 @@ class PreferShorthandsPlugin extends Plugin {
   String get name => 'prefer_shorthands';
 
   Settings? _settings;
+  @visibleForTesting
+  set settings(Settings value) {
+    _settings = value;
+  }
+
   Settings get settings => _settings!;
 
   @override
@@ -51,7 +57,7 @@ class PreferShorthandsRule extends AnalysisRule {
     // due to dart analysis server do not running in the project root
     // here is a workaround to get the settings
     if (plugin._settings == null) {
-      plugin._settings = Settings.loadFromAnalysisOptions(
+      plugin.settings = Settings.loadFromAnalysisOptions(
         context.package?.root.path,
       );
       stderr.writeln('[Prefer Shorthands] Settings: ${plugin.settings}');

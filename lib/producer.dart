@@ -5,6 +5,7 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
+import 'package:prefer_shorthands/utils.dart';
 
 class ConvertToShorthand extends ResolvedCorrectionProducer {
   static const _convertToShorthandKind = FixKind(
@@ -69,6 +70,15 @@ class ConvertToShorthand extends ResolvedCorrectionProducer {
       return;
     }
 
+    final assignmentExpression = errorNode
+        .thisOrAncestorOfType<AssignmentExpression>();
+    if (assignmentExpression != null) {
+      await builder.addDartFileEdit(file, (builder) {
+        builder.addDeletion(range.node(nodeToDelete));
+      });
+      return;
+    }
+
     final variableDeclaration = errorNode
         .thisOrAncestorOfType<VariableDeclaration>();
     if (variableDeclaration == null) return;
@@ -81,7 +91,9 @@ class ConvertToShorthand extends ResolvedCorrectionProducer {
       builder: builder,
       variableList: variableList,
       hasExplicitType: variableList.type != null,
-      staticType: (errorNode as Expression).staticType,
+      staticType: (errorNode as Expression)
+          .getShorthandPrefixElement()
+          ?.thisType,
       nodeToDelete: nodeToDelete,
     );
   }

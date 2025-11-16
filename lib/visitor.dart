@@ -6,6 +6,7 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:prefer_shorthands/utils.dart';
 
 import 'main.dart';
 import 'settings.dart';
@@ -25,33 +26,25 @@ class Visitor extends SimpleAstVisitor<void> {
     registry.addVariableDeclaration(rule, this);
     registry.addConstantPattern(rule, this);
     registry.addArgumentList(rule, this);
+    registry.addAssignmentExpression(rule, this);
   }
 
   void _checkAndReport({
     required Expression expression,
-    required DartType? staticType,
-    required DartType declaredType,
-    required InterfaceElement prefixElement,
-    required bool hasExplicitType,
+    required DartType? declaredType,
+    required InterfaceType prefixType,
   }) {
-    if (staticType == null) return;
-
-    if (declaredType.getDisplayString() != staticType.getDisplayString()) {
+    final expressionType = expression.staticType;
+    if (expressionType == null) return;
+    if (!context.typeSystem.isSubtypeOf(expressionType, prefixType)) {
       return;
     }
 
-    final prefixType = prefixElement.thisType;
-
-    if (staticType != prefixType &&
-        (staticType is! InterfaceType ||
-            staticType.asInstanceOf(prefixElement) == null)) {
-      return;
-    }
-
-    if (hasExplicitType &&
-        prefixType != declaredType &&
-        context.typeSystem.isAssignableTo(prefixType, declaredType)) {
-      return;
+    if (declaredType != null) {
+      if (prefixType != declaredType &&
+          context.typeSystem.isSubtypeOf(prefixType, declaredType)) {
+        return;
+      }
     }
 
     rule.reportAtNode(expression);
@@ -73,15 +66,34 @@ class Visitor extends SimpleAstVisitor<void> {
       return;
     }
 
-    final prefixElement = initializer.extractInterfaceElement();
+    final prefixElement = initializer.getShorthandPrefixElement();
     if (prefixElement == null) return;
 
     _checkAndReport(
       expression: initializer,
-      staticType: initializer.staticType,
       declaredType: declaredType,
-      prefixElement: prefixElement,
-      hasExplicitType: hasExplicitType,
+      prefixType: prefixElement.thisType,
+    );
+  }
+
+  @override
+  void visitAssignmentExpression(AssignmentExpression node) {
+    final rightHandSide = node.rightHandSide;
+    if (rightHandSide.isDotShorthand) return;
+
+    final declaredType = switch (node.leftHandSide) {
+      SimpleIdentifier(element: VariableElement(type: final type)) => type,
+      _ => null,
+    };
+    if (declaredType == null) return;
+
+    final prefixElement = rightHandSide.getShorthandPrefixElement();
+    if (prefixElement == null) return;
+
+    _checkAndReport(
+      expression: rightHandSide,
+      declaredType: declaredType,
+      prefixType: prefixElement.thisType,
     );
   }
 
@@ -91,12 +103,14 @@ class Visitor extends SimpleAstVisitor<void> {
     if (expression.isDotShorthand) return;
     if (expression is! PrefixedIdentifier) return;
 
-    final prefixElement = expression.extractInterfaceElement();
+    final prefixElement = expression.getShorthandPrefixElement();
     if (prefixElement == null) return;
 
-    if (prefixElement.isPrefixType(expression.staticType)) {
-      rule.reportAtNode(expression);
-    }
+    _checkAndReport(
+      expression: expression,
+      declaredType: null,
+      prefixType: prefixElement.thisType,
+    );
   }
 
   @override
@@ -109,7 +123,7 @@ class Visitor extends SimpleAstVisitor<void> {
 
       if (expression.isDotShorthand) continue;
 
-      final prefixElement = expression.extractInterfaceElement();
+      final prefixElement = expression.getShorthandPrefixElement();
       if (prefixElement == null) continue;
 
       final expressionType = expression.staticType;
@@ -122,7 +136,7 @@ class Visitor extends SimpleAstVisitor<void> {
       final parameterBaseType = _getNonNullableType(parameterType);
 
       if (parameterBaseType == prefixType &&
-          context.typeSystem.isAssignableTo(expressionType, parameterType)) {
+          context.typeSystem.isSubtypeOf(expressionType, parameterType)) {
         rule.reportAtNode(expression);
         continue;
       }
@@ -191,7 +205,7 @@ class Visitor extends SimpleAstVisitor<void> {
 
     final parameterElement = parameterBaseType.element;
 
-    if (!context.typeSystem.isAssignableTo(
+    if (!context.typeSystem.isSubtypeOf(
       prefixElement.thisType,
       parameterBaseType,
     )) {
@@ -213,48 +227,4 @@ class Visitor extends SimpleAstVisitor<void> {
 
     return redirectedConstructor.enclosingElement == prefixElement;
   }
-}
-
-extension on InterfaceElement {
-  bool isPrefixType(DartType? staticType) => switch (staticType) {
-    null => false,
-    final type when type == thisType => true,
-    InterfaceType type when type.asInstanceOf(this) != null => true,
-    _ => false,
-  };
-
-  ConstructorElement? getConstructorByNameOrNull(String constructorName) =>
-      constructors.where((c) => c.name == constructorName).firstOrNull;
-}
-
-extension on Expression {
-  String? get constructorNameIfInstanceCreation => switch (this) {
-    InstanceCreationExpression(
-      constructorName: ConstructorName(name: final name),
-    ) =>
-      name?.name,
-    _ => null,
-  };
-
-  bool get isDotShorthand => switch (this) {
-    DotShorthandConstructorInvocation() ||
-    DotShorthandPropertyAccess() ||
-    DotShorthandInvocation() => true,
-    _ => false,
-  };
-
-  InterfaceElement? extractInterfaceElement() => switch (this) {
-    InstanceCreationExpression(
-      constructorName: ConstructorName(name: final name),
-      staticType: InterfaceType(element: final element),
-    )
-        when name?.name != null && name?.name != 'new' =>
-      element,
-    PropertyAccess(target: SimpleIdentifier(element: InterfaceElement e)) => e,
-    PrefixedIdentifier(prefix: SimpleIdentifier(element: InterfaceElement e)) =>
-      e,
-    MethodInvocation(target: SimpleIdentifier(element: InterfaceElement e)) =>
-      e,
-    _ => null,
-  };
 }
