@@ -2,9 +2,7 @@
 
 [![pub package](https://img.shields.io/pub/v/prefer_shorthands.svg)](https://pub.dev/packages/prefer_shorthands)
 
-> ⚡ **Linter** and **Quick-fix**. Enjoy it! ✨
-
-<!-- -->
+⚡ **Linter** and **Quick-fix**. Enjoy it! ✨
 
 > ⚠️ **Warning:** There may be some missing cases and other unknown issues. Welcome to [report an issue](https://github.com/huanghui1998hhh/prefer_shorthands/issues).
 
