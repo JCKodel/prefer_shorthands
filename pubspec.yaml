@@ -3,6 +3,13 @@ description: An analyzer plugin that suggests using Dart's dot shorthand syntax.
 homepage: https://github.com/huanghui1998hhh/prefer_shorthands
 version: 0.3.2
 
+keywords:
+  - dart
+  - dot-shorthand
+  - analyzer-plugin
+  - linter
+  - quick-fix
+
 environment:
   sdk: ^3.10.0-0
 
