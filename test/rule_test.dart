@@ -13,7 +13,7 @@ late final String codeContent;
 void main() async {
   Registry.ruleRegistry.registerLintRule(PreferShorthandsRule());
 
-  codeContent = await File('example/lib/main.dart').readAsString();
+  codeContent = (await File('example/lib/main.dart').readAsLines()).join('\n');
 
   defineReflectiveSuite(() {
     defineReflectiveTests(PreferShorthandsRuleTest);
@@ -28,37 +28,37 @@ class PreferShorthandsRuleTest extends AnalysisRuleTest {
   void test_prefer_shorthands() async {
     plugin.settings = Settings(convertImplicitDeclaration: false);
     await assertDiagnostics(codeContent, [
-      lint(200, 11),
-      lint(353, 7),
-      lint(372, 7),
-      lint(400, 5),
-      lint(410, 11),
-      lint(439, 5),
-      lint(446, 11),
-      lint(497, 5),
-      lint(512, 5),
+      lint(192, 11),
+      lint(340, 7),
+      lint(358, 7),
+      lint(384, 5),
+      lint(394, 11),
+      lint(422, 5),
+      lint(429, 11),
+      lint(479, 5),
+      lint(493, 5),
     ]);
   }
 
   void test_convert_implicit_declaration() async {
     plugin.settings = Settings(convertImplicitDeclaration: true);
     await assertDiagnostics(codeContent, [
-      lint(32, 23),
-      lint(86, 10),
-      lint(111, 5),
-      lint(131, 5),
-      lint(151, 7),
-      lint(173, 10),
-      lint(200, 11),
-      lint(353, 7),
-      lint(372, 7),
-      lint(400, 5),
-      lint(410, 11),
-      lint(439, 5),
-      lint(446, 11),
-      lint(473, 30),
-      lint(497, 5),
-      lint(512, 5),
+      lint(31, 23),
+      lint(83, 10),
+      lint(107, 5),
+      lint(126, 5),
+      lint(145, 7),
+      lint(166, 10),
+      lint(192, 11),
+      lint(340, 7),
+      lint(358, 7),
+      lint(384, 5),
+      lint(394, 11),
+      lint(422, 5),
+      lint(429, 11),
+      lint(455, 30),
+      lint(479, 5),
+      lint(493, 5),
     ]);
   }
 }
