@@ -29,7 +29,8 @@ void main() {
     case EnumA.a || EnumA.b when enumItem == EnumA.a:
     default:
   }
-  print([string, a, b, c, d, e, f, g, h, i, j, k, l, m, enumList, enumItem]);
+  final A n = .integer(int.parse('1'));
+  print([string, a, b, c, d, e, f, g, h, i, j, k, l, m, n, enumList, enumItem]);
 }
 
 class A {
