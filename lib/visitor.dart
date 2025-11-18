@@ -33,8 +33,9 @@ class Visitor extends SimpleAstVisitor<void> {
     required Expression expression,
     required DartType? declaredType,
   }) {
-    final prefixType = expression.getShorthandPrefixElement()?.thisType;
-    if (prefixType == null) return;
+    final temp = expression.getShorthandPrefixElement();
+    if (temp == null) return;
+    final (prefixElement, prefixType) = temp;
 
     final expressionType = expression.staticType;
     if (expressionType == null) return;
@@ -45,11 +46,7 @@ class Visitor extends SimpleAstVisitor<void> {
     if (declaredType != null) {
       if (prefixType != context.typeSystem.promoteToNonNull(declaredType) &&
           context.typeSystem.isSubtypeOf(prefixType, declaredType)) {
-        if (!_isRedirectConstructor(
-          expression,
-          prefixType.element,
-          declaredType,
-        )) {
+        if (!_isRedirectConstructor(expression, prefixElement, declaredType)) {
           return;
         }
       }
@@ -128,10 +125,15 @@ class Visitor extends SimpleAstVisitor<void> {
 
       if (expression.isDotShorthand) continue;
 
-      _checkAndReport(
-        expression: expression,
-        declaredType: argument.correspondingParameter?.type,
-      );
+      final parameter = argument.correspondingParameter;
+      final baseType = parameter?.baseElement.type;
+
+      if (baseType is TypeParameterType) {
+        final hasExplicitContext = argument.hasExplicitTypeContext;
+        if (!hasExplicitContext) continue;
+      }
+
+      _checkAndReport(expression: expression, declaredType: parameter?.type);
     }
   }
 
