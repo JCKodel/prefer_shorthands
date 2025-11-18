@@ -1,3 +1,7 @@
+## 0.4.1
+
+- Fix [#5](https://github.com/huanghui1998hhh/prefer_shorthands/issues/5)
+
 ## 0.4.0
 
 - Add more case.

@@ -30,7 +30,9 @@ void main() {
     default:
   }
   final A n = .integer(int.parse('1'));
+  // dart format off
   print([string, a, b, c, d, e, f, g, h, i, j, k, l, m, n, enumList, enumItem]);
+  // dart format on
 }
 
 class A {

@@ -81,4 +81,30 @@ class PreferShorthandsRuleTest extends AnalysisRuleTest {
       lint(784, 14),
     ]);
   }
+
+  /// https://github.com/huanghui1998hhh/prefer_shorthands/issues/5
+  void test_5_generics_implicit() async {
+    const code = '''
+  final a = List.filled(5, EnumA.a);
+
+  enum EnumA { a, b }
+  ''';
+
+    plugin.settings = Settings(convertImplicitDeclaration: false);
+    await assertDiagnostics(code, []);
+    plugin.settings = Settings(convertImplicitDeclaration: true);
+    await assertDiagnostics(code, [lint(12, 23)]);
+  }
+
+  void test_5_generics_explicit() async {
+    plugin.settings = Settings(convertImplicitDeclaration: true);
+    await assertDiagnostics(
+      '''
+  final List<EnumA> a = List.filled(5, EnumA.a);
+
+  enum EnumA { a, b }
+  ''',
+      [lint(24, 23), lint(39, 7)],
+    );
+  }
 }

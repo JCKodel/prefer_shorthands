@@ -23,18 +23,35 @@ extension ExpressionExtension on Expression {
     _ => false,
   };
 
-  InterfaceElement? getShorthandPrefixElement() => switch (this) {
+  (InterfaceElement, DartType)? getShorthandPrefixElement() => switch (this) {
     InstanceCreationExpression(
-      constructorName: ConstructorName(name: final name),
-      staticType: InterfaceType(element: final element),
+      constructorName: ConstructorName(:final name),
+      staticType: InterfaceType(:final element, :final extensionTypeErasure),
     )
         when name?.name != null && name?.name != 'new' =>
-      element,
-    PropertyAccess(target: SimpleIdentifier(element: InterfaceElement e)) => e,
+      (element, extensionTypeErasure),
+    PropertyAccess(target: SimpleIdentifier(element: InterfaceElement e)) => (
+      e,
+      e.thisType,
+    ),
     PrefixedIdentifier(prefix: SimpleIdentifier(element: InterfaceElement e)) =>
+      (e, e.thisType),
+    MethodInvocation(target: SimpleIdentifier(element: InterfaceElement e)) => (
       e,
-    MethodInvocation(target: SimpleIdentifier(element: InterfaceElement e)) =>
-      e,
+      e.thisType,
+    ),
     _ => null,
   };
+
+  bool get hasExplicitTypeContext {
+    final varDecl = thisOrAncestorOfType<VariableDeclaration>();
+    if (varDecl != null) {
+      final varList = varDecl.thisOrAncestorOfType<VariableDeclarationList>();
+      if (varList?.type != null) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 }

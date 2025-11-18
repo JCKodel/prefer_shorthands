@@ -47,10 +47,9 @@ class ConvertToShorthand extends ResolvedCorrectionProducer {
     final hasExplicitType = variableList.type != null;
     if (hasExplicitType) return;
 
-    final staticType = (node as Expression)
-        .getShorthandPrefixElement()
-        ?.thisType;
-    if (staticType == null) return;
+    final temp = (node as Expression).getShorthandPrefixElement();
+    if (temp == null) return;
+    final (_, staticType) = temp;
 
     final keyword = variableList.keyword;
     if (keyword == null) return;
