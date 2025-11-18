@@ -1,3 +1,9 @@
+## 0.4.2
+
+- Fix `Size(100, 100) > Size.zero` be wrong marning, the opearator `>` required righthand type is `Size`'s Base Class, so here can't use shorthand.
+A similar situation is operator `??`.
+- Fix `bugDog(Animal.dog());`, `.dog` is `Animal`'s constructor, but function need a `Dog`, so here can't use shorthand.
+
 ## 0.4.1
 
 - Fix [#5](https://github.com/huanghui1998hhh/prefer_shorthands/issues/5)

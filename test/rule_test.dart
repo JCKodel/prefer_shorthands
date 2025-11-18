@@ -8,6 +8,7 @@ import 'package:prefer_shorthands/main.dart';
 import 'package:prefer_shorthands/settings.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
+import 'animal.dart';
 import 'size.dart';
 
 late final String codeContent;
@@ -121,5 +122,17 @@ $sizeClasses
 ''',
       [lint(38, 9)],
     );
+  }
+
+  void test_parameter_type_relax() async {
+    await assertDiagnostics('''
+void main() {
+  bugDog(Animal.dog());
+}
+
+void bugDog(Dog dog) {}
+void getaHuskyIfNoAnimal(Animal? animal) => animal ?? Dog.husky();
+$animalClasses
+''', []);
   }
 }

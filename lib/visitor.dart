@@ -30,9 +30,14 @@ class Visitor extends SimpleAstVisitor<void> {
     registry.addBinaryExpression(rule, this);
   }
 
+  /// [canModifyDeclaredType] is true when the declared type can be modified,
+  ///
+  /// case `final animal = Animal.dog()` can -> `final Animal animal = .dog();`
+  /// Even if `Animal.dog()` returns a `Dog` that is subclass of `Animal`,
   void _checkAndReport({
     required Expression expression,
     required DartType? declaredType,
+    bool canModifyDeclaredType = false,
   }) {
     final temp = expression.getShorthandPrefixElement();
     if (temp == null) return;
@@ -45,10 +50,17 @@ class Visitor extends SimpleAstVisitor<void> {
     }
 
     if (declaredType != null) {
-      if (prefixType != context.typeSystem.promoteToNonNull(declaredType) &&
-          context.typeSystem.isSubtypeOf(prefixType, declaredType)) {
-        if (!_isRedirectConstructor(expression, prefixElement, declaredType)) {
-          return;
+      if (prefixType != context.typeSystem.promoteToNonNull(declaredType)) {
+        if (context.typeSystem.isSubtypeOf(prefixType, declaredType)) {
+          if (!_isRedirectConstructor(
+            expression,
+            prefixElement,
+            declaredType,
+          )) {
+            return;
+          }
+        } else {
+          if (!canModifyDeclaredType) return;
         }
       }
     }
@@ -72,6 +84,7 @@ class Visitor extends SimpleAstVisitor<void> {
     _checkAndReport(
       expression: expression,
       declaredType: node.declaredFragment?.element.type,
+      canModifyDeclaredType: true,
     );
   }
 
@@ -113,8 +126,10 @@ class Visitor extends SimpleAstVisitor<void> {
     _checkAndReport(
       expression: expression,
       declaredType: switch (node) {
-        BinaryExpression(operator: Token(lexeme: '==')) =>
-          node.leftOperand.staticType,
+        BinaryExpression(operator: Token(lexeme: '==')) ||
+        BinaryExpression(
+          operator: Token(lexeme: '??'),
+        ) => node.leftOperand.staticType,
         _ => node.rightOperand.correspondingParameter?.type,
       },
     );
