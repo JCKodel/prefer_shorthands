@@ -4,7 +4,6 @@ import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:prefer_shorthands/utils.dart';
 
@@ -27,13 +26,16 @@ class Visitor extends SimpleAstVisitor<void> {
     registry.addConstantPattern(rule, this);
     registry.addArgumentList(rule, this);
     registry.addAssignmentExpression(rule, this);
+    registry.addBinaryExpression(rule, this);
   }
 
   void _checkAndReport({
     required Expression expression,
     required DartType? declaredType,
-    required InterfaceType prefixType,
   }) {
+    final prefixType = expression.getShorthandPrefixElement()?.thisType;
+    if (prefixType == null) return;
+
     final expressionType = expression.staticType;
     if (expressionType == null) return;
     if (!context.typeSystem.isSubtypeOf(expressionType, prefixType)) {
@@ -41,9 +43,15 @@ class Visitor extends SimpleAstVisitor<void> {
     }
 
     if (declaredType != null) {
-      if (prefixType != declaredType &&
+      if (prefixType != context.typeSystem.promoteToNonNull(declaredType) &&
           context.typeSystem.isSubtypeOf(prefixType, declaredType)) {
-        return;
+        if (!_isRedirectConstructor(
+          expression,
+          prefixType.element,
+          declaredType,
+        )) {
+          return;
+        }
       }
     }
 
@@ -52,12 +60,9 @@ class Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitVariableDeclaration(VariableDeclaration node) {
-    final initializer = node.initializer;
-    if (initializer == null) return;
-    if (initializer.isDotShorthand) return;
-
-    final declaredType = node.declaredFragment?.element.type;
-    if (declaredType == null) return;
+    final expression = node.initializer;
+    if (expression == null) return;
+    if (expression.isDotShorthand) return;
 
     final variableList = node.thisOrAncestorOfType<VariableDeclarationList>();
     final hasExplicitType = variableList?.type != null;
@@ -66,35 +71,23 @@ class Visitor extends SimpleAstVisitor<void> {
       return;
     }
 
-    final prefixElement = initializer.getShorthandPrefixElement();
-    if (prefixElement == null) return;
-
     _checkAndReport(
-      expression: initializer,
-      declaredType: declaredType,
-      prefixType: prefixElement.thisType,
+      expression: expression,
+      declaredType: node.declaredFragment?.element.type,
     );
   }
 
   @override
   void visitAssignmentExpression(AssignmentExpression node) {
-    final rightHandSide = node.rightHandSide;
-    if (rightHandSide.isDotShorthand) return;
+    final expression = node.rightHandSide;
+    if (expression.isDotShorthand) return;
 
     final declaredType = switch (node.leftHandSide) {
       SimpleIdentifier(element: VariableElement(type: final type)) => type,
       _ => null,
     };
-    if (declaredType == null) return;
 
-    final prefixElement = rightHandSide.getShorthandPrefixElement();
-    if (prefixElement == null) return;
-
-    _checkAndReport(
-      expression: rightHandSide,
-      declaredType: declaredType,
-      prefixType: prefixElement.thisType,
-    );
+    _checkAndReport(expression: expression, declaredType: declaredType);
   }
 
   @override
@@ -103,13 +96,25 @@ class Visitor extends SimpleAstVisitor<void> {
     if (expression.isDotShorthand) return;
     if (expression is! PrefixedIdentifier) return;
 
-    final prefixElement = expression.getShorthandPrefixElement();
-    if (prefixElement == null) return;
+    final declaredType = switch (node.parent) {
+      GuardedPattern(:final pattern) => pattern.matchedValueType,
+      LogicalOrPattern(parent: GuardedPattern(:final pattern)) =>
+        pattern.matchedValueType,
+      _ => null,
+    };
+    if (declaredType == null) return;
+
+    _checkAndReport(expression: expression, declaredType: declaredType);
+  }
+
+  @override
+  void visitBinaryExpression(BinaryExpression node) {
+    final expression = node.rightOperand;
+    if (expression.isDotShorthand) return;
 
     _checkAndReport(
       expression: expression,
-      declaredType: null,
-      prefixType: prefixElement.thisType,
+      declaredType: node.leftOperand.staticType,
     );
   }
 
@@ -117,98 +122,41 @@ class Visitor extends SimpleAstVisitor<void> {
   void visitArgumentList(ArgumentList node) {
     for (final argument in node.arguments) {
       final expression = switch (argument) {
-        NamedExpression(expression: final expr) => expr,
-        Expression expr => expr,
+        NamedExpression(:final expression) => expression,
+        _ => argument,
       };
 
       if (expression.isDotShorthand) continue;
 
-      final prefixElement = expression.getShorthandPrefixElement();
-      if (prefixElement == null) continue;
-
-      final expressionType = expression.staticType;
-      if (expressionType == null) continue;
-
-      final parameterType = _getParameterType(argument, expression);
-      if (parameterType == null) continue;
-
-      final prefixType = prefixElement.thisType;
-      final parameterBaseType = _getNonNullableType(parameterType);
-
-      if (parameterBaseType == prefixType &&
-          context.typeSystem.isSubtypeOf(expressionType, parameterType)) {
-        rule.reportAtNode(expression);
-        continue;
-      }
-
-      if (_shouldUseShorthandForFactoryRedirect(
-        expression,
-        prefixElement,
-        parameterBaseType,
-      )) {
-        rule.reportAtNode(expression);
-      }
+      _checkAndReport(
+        expression: expression,
+        declaredType: argument.correspondingParameter?.type,
+      );
     }
   }
 
-  DartType? _getParameterType(Expression argument, Expression expression) {
-    if (argument is NamedExpression) {
-      return argument.element?.type;
-    }
-
-    if (expression.parent case final parent?) {
-      if (parent is NamedExpression) {
-        return parent.element?.type;
-      }
-    }
-
-    final argumentList = expression.thisOrAncestorOfType<ArgumentList>();
-    if (argumentList == null) return null;
-
-    final parent = argumentList.parent;
-    final argumentIndex = argumentList.arguments.indexOf(argument);
-    if (argumentIndex == -1) return null;
-
-    if (parent is MethodInvocation) {
-      final element = parent.methodName.element;
-      return _getParameterTypeFromElement(element, argumentIndex);
-    } else if (parent is InstanceCreationExpression) {
-      final element = parent.constructorName.element;
-      return _getParameterTypeFromElement(element, argumentIndex);
-    }
-
-    return null;
-  }
-
-  DartType? _getParameterTypeFromElement(Element? element, int index) {
-    if (element is! ExecutableElement) return null;
-
-    final formalParameters = element.formalParameters;
-    if (index < 0 || index >= formalParameters.length) return null;
-
-    return formalParameters[index].type;
-  }
-
-  DartType _getNonNullableType(DartType type) {
-    if (type.nullabilitySuffix == NullabilitySuffix.none) {
-      return type;
-    }
-    return context.typeSystem.promoteToNonNull(type);
-  }
-
-  bool _shouldUseShorthandForFactoryRedirect(
+  /// Check same name constructor is redirected constructor
+  ///
+  /// resolve case:
+  /// ```dart
+  /// Padding(
+  ///   padding: const EdgeInsets.all(10),
+  ///   child: xxx,
+  /// );
+  /// ```
+  /// `padding` need a `EdgeInsetsGeometry`, then `EdgeInsetsGeometry`
+  ///  has a redirected constructor to `EdgeInsets`, like
+  /// `EdgeInsetsGeometry.all` -> `EdgeInsets.all`.
+  bool _isRedirectConstructor(
     Expression expression,
     InterfaceElement prefixElement,
-    DartType parameterBaseType,
+    DartType declaredType,
   ) {
-    if (parameterBaseType is! InterfaceType) return false;
+    if (declaredType is! InterfaceType) return false;
 
-    final parameterElement = parameterBaseType.element;
+    final parameterElement = declaredType.element;
 
-    if (!context.typeSystem.isSubtypeOf(
-      prefixElement.thisType,
-      parameterBaseType,
-    )) {
+    if (!context.typeSystem.isSubtypeOf(prefixElement.thisType, declaredType)) {
       return false;
     }
 

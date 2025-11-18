@@ -1,3 +1,9 @@
+## 0.4.0
+
+- Add more case.
+- Optimized code.
+- Improved testing.
+
 ## 0.3.3
 
 - Chore

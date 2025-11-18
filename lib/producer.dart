@@ -1,8 +1,8 @@
 import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analysis_server_plugin/edit/dart/dart_fix_kind_priority.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer_plugin/utilities/change_builder/change_builder_core.dart';
+import 'package:analyzer_plugin/utilities/change_builder/change_builder_dart.dart';
 import 'package:analyzer_plugin/utilities/fixes/fixes.dart';
 import 'package:analyzer_plugin/utilities/range_factory.dart';
 import 'package:prefer_shorthands/utils.dart';
@@ -23,92 +23,54 @@ class ConvertToShorthand extends ResolvedCorrectionProducer {
   @override
   FixKind get fixKind => _convertToShorthandKind;
 
-  Future<void> _applyFix({
-    required ChangeBuilder builder,
-    required VariableDeclarationList variableList,
-    required bool hasExplicitType,
-    required DartType? staticType,
-    required AstNode nodeToDelete,
-  }) async {
-    if (staticType == null) return;
+  @override
+  Future<void> compute(ChangeBuilder builder) async {
+    final nodeToDelete = node.getNodeToDelete();
 
+    if (nodeToDelete == null) return;
     await builder.addDartFileEdit(file, (builder) {
-      if (!hasExplicitType) {
-        final keyword = variableList.keyword;
-        if (keyword != null) {
-          builder.addSimpleInsertion(
-            keyword.end,
-            ' ${staticType.getDisplayString()}',
-          );
-        }
-      }
-
+      addExplicitTypeDeclarationIfNeeded(builder);
       builder.addDeletion(range.node(nodeToDelete));
     });
   }
 
-  @override
-  Future<void> compute(ChangeBuilder builder) async {
-    final errorNode = node;
-
-    if (errorNode case PrefixedIdentifier(
-      prefix: final prefix,
-    ) when errorNode.thisOrAncestorOfType<ConstantPattern>() != null) {
-      await builder.addDartFileEdit(file, (builder) {
-        builder.addDeletion(range.node(prefix));
-      });
-      return;
-    }
-
-    final nodeToDelete = errorNode.getNodeToDelete();
-    if (nodeToDelete == null) return;
-
-    if (errorNode.thisOrAncestorOfType<ArgumentList>() != null) {
-      await builder.addDartFileEdit(file, (builder) {
-        builder.addDeletion(range.node(nodeToDelete));
-      });
-      return;
-    }
-
-    final assignmentExpression = errorNode
-        .thisOrAncestorOfType<AssignmentExpression>();
-    if (assignmentExpression != null) {
-      await builder.addDartFileEdit(file, (builder) {
-        builder.addDeletion(range.node(nodeToDelete));
-      });
-      return;
-    }
-
-    final variableDeclaration = errorNode
-        .thisOrAncestorOfType<VariableDeclaration>();
-    if (variableDeclaration == null) return;
-
-    final variableList = variableDeclaration
-        .thisOrAncestorOfType<VariableDeclarationList>();
+  void addExplicitTypeDeclarationIfNeeded(DartFileEditBuilder builder) {
+    final variableList = switch (node) {
+      Expression(
+        parent: VariableDeclaration(parent: final VariableDeclarationList e),
+      ) =>
+        e,
+      _ => null,
+    };
     if (variableList == null) return;
 
-    await _applyFix(
-      builder: builder,
-      variableList: variableList,
-      hasExplicitType: variableList.type != null,
-      staticType: (errorNode as Expression)
-          .getShorthandPrefixElement()
-          ?.thisType,
-      nodeToDelete: nodeToDelete,
+    final hasExplicitType = variableList.type != null;
+    if (hasExplicitType) return;
+
+    final staticType = (node as Expression)
+        .getShorthandPrefixElement()
+        ?.thisType;
+    if (staticType == null) return;
+
+    final keyword = variableList.keyword;
+    if (keyword == null) return;
+
+    builder.addSimpleInsertion(
+      keyword.end,
+      ' ${staticType.getDisplayString()}',
     );
   }
 }
 
 extension on AstNode {
   AstNode? getNodeToDelete() => switch (this) {
+    PrefixedIdentifier(prefix: final prefix) => prefix,
+    MethodInvocation(target: final target) => target,
     InstanceCreationExpression(
       constructorName: ConstructorName(name: final name, type: final type),
     )
         when name != null =>
       type,
-    PropertyAccess(target: final target) => target,
-    PrefixedIdentifier(prefix: final prefix) => prefix,
-    MethodInvocation(target: final target) => target,
     _ => null,
   };
 }

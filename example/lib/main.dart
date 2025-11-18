@@ -18,7 +18,18 @@ void main() {
   final j = C(A.b(), B.createB());
   final k = C.named(B.createB(), b: B.b());
   a = A.c();
-  print([string, a, b, c, d, e, f, g, h, i, j, k, enumList, enumItem]);
+  final A l = B.b();
+  final m = switch (enumItem) {
+    EnumA.a || EnumA.b when enumItem == EnumA.a => 1,
+    _ => 2,
+  };
+  if (a == A.defaultB) {}
+  switch (enumItem) {
+    case EnumA.a:
+    case EnumA.a || EnumA.b when enumItem == EnumA.a:
+    default:
+  }
+  print([string, a, b, c, d, e, f, g, h, i, j, k, l, m, enumList, enumItem]);
 }
 
 class A {
@@ -27,6 +38,8 @@ class A {
   const factory A.b() = B.b;
 
   const A.c();
+
+  static A integer(int value) => A();
 
   static const defaultB = B();
 

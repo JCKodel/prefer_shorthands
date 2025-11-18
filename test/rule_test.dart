@@ -37,6 +37,15 @@ class PreferShorthandsRuleTest extends AnalysisRuleTest {
       lint(429, 11),
       lint(479, 5),
       lint(493, 5),
+      lint(514, 5),
+      lint(557, 7),
+      lint(568, 7),
+      lint(593, 7),
+      lint(635, 10),
+      lint(681, 7),
+      lint(699, 7),
+      lint(710, 7),
+      lint(735, 7),
     ]);
   }
 
@@ -59,6 +68,15 @@ class PreferShorthandsRuleTest extends AnalysisRuleTest {
       lint(455, 30),
       lint(479, 5),
       lint(493, 5),
+      lint(514, 5),
+      lint(557, 7),
+      lint(568, 7),
+      lint(593, 7),
+      lint(635, 10),
+      lint(681, 7),
+      lint(699, 7),
+      lint(710, 7),
+      lint(735, 7),
     ]);
   }
 }
