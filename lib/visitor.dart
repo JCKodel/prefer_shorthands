@@ -2,6 +2,7 @@ import 'package:analyzer/analysis_rule/analysis_rule.dart';
 import 'package:analyzer/analysis_rule/rule_context.dart';
 import 'package:analyzer/analysis_rule/rule_visitor_registry.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
@@ -111,7 +112,11 @@ class Visitor extends SimpleAstVisitor<void> {
 
     _checkAndReport(
       expression: expression,
-      declaredType: node.leftOperand.staticType,
+      declaredType: switch (node) {
+        BinaryExpression(operator: Token(lexeme: '==')) =>
+          node.leftOperand.staticType,
+        _ => node.rightOperand.correspondingParameter?.type,
+      },
     );
   }
 

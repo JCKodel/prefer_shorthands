@@ -8,6 +8,8 @@ import 'package:prefer_shorthands/main.dart';
 import 'package:prefer_shorthands/settings.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
+import 'size.dart';
+
 late final String codeContent;
 
 void main() async {
@@ -105,6 +107,19 @@ class PreferShorthandsRuleTest extends AnalysisRuleTest {
   enum EnumA { a, b }
   ''',
       [lint(24, 23), lint(39, 7)],
+    );
+  }
+
+  void test_binaryExpression() async {
+    await assertDiagnostics(
+      '''
+void main() {
+  if (Size(100, 100) == Size.zero) {}
+  if (Size(100, 100) > Size.zero) {}
+}
+$sizeClasses
+''',
+      [lint(38, 9)],
     );
   }
 }
