@@ -2,6 +2,7 @@
 
 - Adapt `List` and `Set`.
 - Adapt operator `!=`.
+- Add case `DefaultFormalParameter`.
 
 ## 0.4.2
 

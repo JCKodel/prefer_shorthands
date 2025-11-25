@@ -30,6 +30,7 @@ class Visitor extends SimpleAstVisitor<void> {
     registry.addBinaryExpression(rule, this);
     registry.addListLiteral(rule, this);
     registry.addSetOrMapLiteral(rule, this);
+    registry.addDefaultFormalParameter(rule, this);
   }
 
   /// [canModifyDeclaredType] is true when the declared type can be modified,
@@ -162,30 +163,7 @@ class Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitListLiteral(ListLiteral node) {
-    final declaredType = switch (node) {
-      ListLiteral(
-        typeArguments: TypeArgumentList(
-          arguments: [TypeAnnotation(:final type)],
-        ),
-      )
-          when type != null =>
-        type,
-      ListLiteral(
-        parent: Declaration(
-          parent: VariableDeclarationList(
-            type: NamedType(
-              type: InterfaceType(
-                isDartCoreList: true,
-                typeArguments: [final type],
-              ),
-            ),
-          ),
-        ),
-      ) =>
-        type,
-      _ => null,
-    };
-
+    final declaredType = node.getIterableGenericType(IterableType.list);
     if (declaredType == null) return;
 
     for (final element in node.elements) {
@@ -202,30 +180,7 @@ class Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitSetOrMapLiteral(SetOrMapLiteral node) {
-    final declaredType = switch (node) {
-      SetOrMapLiteral(
-        typeArguments: TypeArgumentList(
-          arguments: [TypeAnnotation(:final type)],
-        ),
-      )
-          when type != null =>
-        type,
-      SetOrMapLiteral(
-        parent: Declaration(
-          parent: VariableDeclarationList(
-            type: NamedType(
-              type: InterfaceType(
-                isDartCoreSet: true,
-                typeArguments: [final type],
-              ),
-            ),
-          ),
-        ),
-      ) =>
-        type,
-      _ => null,
-    };
-
+    final declaredType = node.getIterableGenericType(IterableType.set);
     if (declaredType == null) return;
 
     for (final element in node.elements) {
@@ -238,6 +193,23 @@ class Visitor extends SimpleAstVisitor<void> {
 
       _checkAndReport(expression: expression, declaredType: declaredType);
     }
+  }
+
+  @override
+  void visitDefaultFormalParameter(DefaultFormalParameter node) {
+    final expression = node.defaultValue;
+    if (expression == null) return;
+    if (expression.isDotShorthand) return;
+
+    final declaredType = switch (node.parameter) {
+      SimpleFormalParameter(type: NamedType(type: final type)) => type,
+      _ => null,
+    };
+
+    // not same as `variableDeclaration`, function parameter won't do type inference
+    if (declaredType == null) return;
+
+    _checkAndReport(expression: expression, declaredType: declaredType);
   }
 
   /// Check same name constructor is redirected constructor

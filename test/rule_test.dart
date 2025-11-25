@@ -163,4 +163,33 @@ enum EnumA { a, b }
       [lint(18, 7), lint(27, 7), lint(89, 7), lint(98, 7)],
     );
   }
+
+  /// https://github.com/huanghui1998hhh/prefer_shorthands/issues/8
+  void test_8() async {
+    await assertDiagnostics(
+      '''
+void f({
+  Set<Direction> directions = const {Direction.left, Direction.right},
+  String a = const String.fromEnvironment('a'),
+  b = const String.fromEnvironment('b'),
+}) {}
+
+void d([
+  Set<Direction> directions = const {Direction.left, Direction.right},
+  String a = const String.fromEnvironment('a'),
+  b = const String.fromEnvironment('b'),
+]) {}
+
+enum Direction { left, right }
+''',
+      [
+        lint(46, 14),
+        lint(62, 15),
+        lint(93, 33),
+        lint(222, 14),
+        lint(238, 15),
+        lint(269, 33),
+      ],
+    );
+  }
 }

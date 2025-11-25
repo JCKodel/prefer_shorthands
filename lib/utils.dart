@@ -55,3 +55,47 @@ extension ExpressionExtension on Expression {
     return false;
   }
 }
+
+extension TypedLiteralExtension on TypedLiteral {
+  DartType? getIterableGenericType(IterableType iterableType) {
+    // `<String>[]`;
+    //  ^^^^^^^^
+    if (typeArguments case TypeArgumentList(
+      arguments: [TypeAnnotation(:final type)],
+    ) when type != null) {
+      return type;
+    }
+
+    // then resolve parent
+    final declaretype = switch (parent) {
+      Declaration(
+        parent: VariableDeclarationList(
+          type: NamedType(:final InterfaceType type),
+        ),
+      ) =>
+        type,
+      DefaultFormalParameter(
+        parameter: SimpleFormalParameter(
+          type: NamedType(:final InterfaceType type),
+        ),
+      ) =>
+        type,
+      _ => null,
+    };
+
+    if (declaretype == null) return null;
+
+    final checkIterableType = switch (iterableType) {
+      IterableType.set => declaretype.isDartCoreSet,
+      IterableType.list => declaretype.isDartCoreList,
+    };
+    if (!checkIterableType) return null;
+
+    return switch (declaretype.typeArguments) {
+      [final type] => type,
+      _ => null,
+    };
+  }
+}
+
+enum IterableType { set, list }
