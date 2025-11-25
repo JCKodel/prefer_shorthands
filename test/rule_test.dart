@@ -210,4 +210,73 @@ enum Direction { left, right }
       [lint(46, 14), lint(154, 14)],
     );
   }
+
+  void test_return_expression() async {
+    await assertDiagnostics(
+      '''
+Direction leftDirection() {
+  return Direction.left;
+}
+
+Direction rightDirection() => Direction.right;
+
+enum Direction { left, right }
+''',
+      [lint(37, 14), lint(86, 15)],
+    );
+  }
+
+  /// https://github.com/huanghui1998hhh/prefer_shorthands/issues/9
+  void test_9() async {
+    await assertDiagnostics(
+      '''
+Direction getDirection(String directionString) {
+  final Direction temp = switch ('') {
+    'left' => switch ('') {
+      'left' => Direction.left,
+      'right' => Direction.right,
+      _ => throw ArgumentError(''),
+    },
+    'right' => Direction.right,
+    _ => throw ArgumentError(''),
+  };
+
+  return switch (directionString) {
+    'left' => switch (directionString) {
+      'left' => Direction.left,
+      'right' => Direction.right,
+      _ => throw ArgumentError(''),
+    },
+    'right' => Direction.right,
+    _ => throw ArgumentError(''),
+  };
+}
+
+extension on String {
+  Direction get direction => switch (this) {
+    'left' => switch (this) {
+      'left' => Direction.left,
+      'right' => Direction.right,
+      _ => throw ArgumentError(''),
+    },
+    'right' => Direction.right,
+    _ => throw ArgumentError(''),
+  };
+}
+
+enum Direction { left, right }
+''',
+      [
+        lint(132, 14),
+        lint(165, 15),
+        lint(240, 15),
+        lint(390, 14),
+        lint(423, 15),
+        lint(498, 15),
+        lint(670, 14),
+        lint(703, 15),
+        lint(778, 15),
+      ],
+    );
+  }
 }
