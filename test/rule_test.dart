@@ -135,4 +135,32 @@ void getaHuskyIfNoAnimal(Animal? animal) => animal ?? Dog.husky();
 $animalClasses
 ''', []);
   }
+
+  void test_list_literal() async {
+    plugin.settings = Settings(convertImplicitDeclaration: false);
+    await assertDiagnostics(
+      '''
+final a = <EnumA>[EnumA.a, EnumA.b];
+final b = [EnumA.a, EnumA.b];
+final List<EnumA> c = [EnumA.a, EnumA.b];
+
+enum EnumA { a, b }
+''',
+      [lint(18, 7), lint(27, 7), lint(90, 7), lint(99, 7)],
+    );
+  }
+
+  void test_set_literal() async {
+    plugin.settings = Settings(convertImplicitDeclaration: false);
+    await assertDiagnostics(
+      '''
+final a = <EnumA>{EnumA.a, EnumA.b};
+final b = {EnumA.a, EnumA.b};
+final Set<EnumA> c = {EnumA.a, EnumA.b};
+
+enum EnumA { a, b }
+''',
+      [lint(18, 7), lint(27, 7), lint(89, 7), lint(98, 7)],
+    );
+  }
 }

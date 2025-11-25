@@ -1,3 +1,7 @@
+## 0.4.3
+
+- Adapt `List` and `Set`.
+
 ## 0.4.2
 
 - Fix `Size(100, 100) > Size.zero` be wrong marning, the opearator `>` required righthand type is `Size`'s Base Class, so here can't use shorthand.

@@ -28,6 +28,8 @@ class Visitor extends SimpleAstVisitor<void> {
     registry.addArgumentList(rule, this);
     registry.addAssignmentExpression(rule, this);
     registry.addBinaryExpression(rule, this);
+    registry.addListLiteral(rule, this);
+    registry.addSetOrMapLiteral(rule, this);
   }
 
   /// [canModifyDeclaredType] is true when the declared type can be modified,
@@ -154,6 +156,86 @@ class Visitor extends SimpleAstVisitor<void> {
       }
 
       _checkAndReport(expression: expression, declaredType: parameter?.type);
+    }
+  }
+
+  @override
+  void visitListLiteral(ListLiteral node) {
+    final declaredType = switch (node) {
+      ListLiteral(
+        typeArguments: TypeArgumentList(
+          arguments: [TypeAnnotation(:final type)],
+        ),
+      )
+          when type != null =>
+        type,
+      ListLiteral(
+        parent: Declaration(
+          parent: VariableDeclarationList(
+            type: NamedType(
+              type: InterfaceType(
+                isDartCoreList: true,
+                typeArguments: [final type],
+              ),
+            ),
+          ),
+        ),
+      ) =>
+        type,
+      _ => null,
+    };
+
+    if (declaredType == null) return;
+
+    for (final element in node.elements) {
+      final expression = switch (element) {
+        Expression() => element,
+        _ => null,
+      };
+      if (expression == null) continue;
+      if (expression.isDotShorthand) continue;
+
+      _checkAndReport(expression: expression, declaredType: declaredType);
+    }
+  }
+
+  @override
+  void visitSetOrMapLiteral(SetOrMapLiteral node) {
+    final declaredType = switch (node) {
+      SetOrMapLiteral(
+        typeArguments: TypeArgumentList(
+          arguments: [TypeAnnotation(:final type)],
+        ),
+      )
+          when type != null =>
+        type,
+      SetOrMapLiteral(
+        parent: Declaration(
+          parent: VariableDeclarationList(
+            type: NamedType(
+              type: InterfaceType(
+                isDartCoreSet: true,
+                typeArguments: [final type],
+              ),
+            ),
+          ),
+        ),
+      ) =>
+        type,
+      _ => null,
+    };
+
+    if (declaredType == null) return;
+
+    for (final element in node.elements) {
+      final expression = switch (element) {
+        Expression() => element,
+        _ => null,
+      };
+      if (expression == null) continue;
+      if (expression.isDotShorthand) continue;
+
+      _checkAndReport(expression: expression, declaredType: declaredType);
     }
   }
 

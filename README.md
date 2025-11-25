@@ -12,7 +12,7 @@ To use this analyzer plugin, add it to your `analysis_options.yaml` file at the 
 
 ```yaml
 plugins:
-  prefer_shorthands: ^0.4.2
+  prefer_shorthands: ^0.4.3
 ```
 
 After adding the plugin, restart the Dart Analysis Server (in VS Code: press `Cmd+Shift+P` and select "Dart: Restart Analysis Server", or in IntelliJ/Android Studio: click the "Restart Dart Analysis Server" button in the toolbar).
