@@ -129,6 +129,7 @@ class Visitor extends SimpleAstVisitor<void> {
       expression: expression,
       declaredType: switch (node) {
         BinaryExpression(operator: Token(lexeme: '==')) ||
+        BinaryExpression(operator: Token(lexeme: '!=')) ||
         BinaryExpression(
           operator: Token(lexeme: '??'),
         ) => node.leftOperand.staticType,

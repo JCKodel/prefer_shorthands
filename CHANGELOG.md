@@ -1,6 +1,7 @@
 ## 0.4.3
 
 - Adapt `List` and `Set`.
+- Adapt operator `!=`.
 
 ## 0.4.2
 
