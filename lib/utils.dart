@@ -58,16 +58,23 @@ extension ExpressionExtension on Expression {
 
 extension TypedLiteralExtension on TypedLiteral {
   DartType? getIterableGenericType(IterableType iterableType) {
-    // `<String>[]`;
-    //  ^^^^^^^^
+    // Handle type arguments from literal itself
+    // For list/set: `<String>[]` or `<String>{}`
+    // For map: `<String, Direction>{}`
     if (typeArguments case TypeArgumentList(
-      arguments: [TypeAnnotation(:final type)],
-    ) when type != null) {
-      return type;
+      :final arguments,
+    ) when arguments.isNotEmpty) {
+      return switch (iterableType) {
+        IterableType.mapValue when arguments.length == 2 => arguments[1].type,
+        IterableType.mapKey when arguments.length == 2 => arguments[0].type,
+        IterableType.list ||
+        IterableType.set when arguments.length == 1 => arguments[0].type,
+        _ => null,
+      };
     }
 
-    // then resolve parent
-    final declaretype = switch (parent) {
+    // Then resolve parent
+    final declaredType = switch (parent) {
       Declaration(
         parent: VariableDeclarationList(
           type: NamedType(:final InterfaceType type),
@@ -83,22 +90,27 @@ extension TypedLiteralExtension on TypedLiteral {
       _ => null,
     };
 
-    if (declaretype == null) return null;
+    if (declaredType == null) return null;
 
-    final checkIterableType = switch (iterableType) {
-      IterableType.set => declaretype.isDartCoreSet,
-      IterableType.list => declaretype.isDartCoreList,
+    final isMatchingType = switch (iterableType) {
+      IterableType.set => declaredType.isDartCoreSet,
+      IterableType.list => declaredType.isDartCoreList,
+      IterableType.mapValue ||
+      IterableType.mapKey => declaredType.isDartCoreMap,
     };
-    if (!checkIterableType) return null;
+    if (!isMatchingType) return null;
 
-    return switch (declaretype.typeArguments) {
-      [final type] => type,
+    return switch ((iterableType, declaredType.typeArguments)) {
+      (IterableType.mapValue, [_, final valueType]) => valueType,
+      (IterableType.mapKey, [final keyType, _]) => keyType,
+      (IterableType.list || IterableType.set, [final elementType]) =>
+        elementType,
       _ => null,
     };
   }
 }
 
-enum IterableType { set, list }
+enum IterableType { set, list, mapValue, mapKey }
 
 extension AstNodeExtension on AstNode {
   DartType? findDeclaredType() {
@@ -119,6 +131,20 @@ extension AstNodeExtension on AstNode {
         thisOrAncestorOfType<MethodDeclaration>()?.returnType;
     if (getterReturnType != null) {
       return getterReturnType.type;
+    }
+
+    return null;
+  }
+
+  DartType? getCollectionElementType() {
+    final listLiteral = thisOrAncestorOfType<ListLiteral>();
+    if (listLiteral != null) {
+      return listLiteral.getIterableGenericType(IterableType.list);
+    }
+
+    final setLiteral = thisOrAncestorOfType<SetOrMapLiteral>();
+    if (setLiteral != null && setLiteral.isSet) {
+      return setLiteral.getIterableGenericType(IterableType.set);
     }
 
     return null;

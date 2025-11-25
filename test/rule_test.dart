@@ -279,4 +279,137 @@ enum Direction { left, right }
       ],
     );
   }
+
+  void test_subtype_prefix_in_supertype_context() async {
+    await assertDiagnostics('''
+void main() {
+  displayAvatar(() => randomUser ?? User.defaultUser);
+  display(randomUser ?? User.defaultUser);
+}
+
+void displayAvatar(UserAvatar Function() avatarBuilder) {}
+void display(UserAvatar avatar) {}
+
+class User with UserAvatar {
+  const User({required this.avatar});
+
+  static const defaultUser = User(avatar: 'default');
+
+  @override
+  final String avatar;
+}
+
+mixin UserAvatar {
+  String get avatar;
+}
+
+User? get randomUser => null;
+''', []);
+  }
+
+  void test_conditional_expression() async {
+    await assertDiagnostics(
+      '''
+void main() {
+  final bool condition = getCondition();
+  final Direction a = condition ? Direction.left : Direction.right;
+  display(condition ? Direction.left : Direction.right);
+  Direction getDirection() => condition ? Direction.left : Direction.right;
+}
+
+bool getCondition() => true;
+void display(Direction dir) {}
+
+enum Direction { left, right }
+''',
+      [
+        lint(89, 14),
+        lint(106, 15),
+        lint(145, 14),
+        lint(162, 15),
+        lint(222, 14),
+        lint(239, 15),
+      ],
+    );
+  }
+
+  void test_collection_elements() async {
+    await assertDiagnostics(
+      '''
+void main() {
+  final List<Direction> directions = [
+    Direction.left,
+    if (getCondition()) Direction.right,
+  ];
+  
+  final Map<String, Direction> map1 = {
+    'left': Direction.left,
+    'right': Direction.right,
+  };
+  
+  final Map<Direction, String> map2 = {
+    Direction.left: 'left',
+    Direction.right: 'right',
+  };
+  
+  final Map<Direction, Direction> map3 = {
+    Direction.left: Direction.right,
+    Direction.right: Direction.left,
+  };
+}
+
+bool getCondition() => true;
+
+enum Direction { left, right }
+''',
+      [
+        lint(57, 14),
+        lint(97, 15),
+        lint(174, 14),
+        lint(203, 15),
+        lint(272, 14),
+        lint(300, 15),
+        lint(381, 14),
+        lint(397, 15),
+        lint(418, 15),
+        lint(435, 14),
+      ],
+    );
+  }
+
+  void test_map_control_flow() async {
+    await assertDiagnostics(
+      '''
+void main() {
+  // Map with if element - key should trigger warning
+  final Map<Direction, String> map1 = {
+    if (getCondition()) Direction.left: 'left',
+  };
+  
+  // Map with for element - key should trigger warning
+  final Map<Direction, String> map2 = {
+    for (var i in [1, 2]) Direction.right: 'value',
+  };
+  
+  // Map with if-else - values should trigger warnings
+  final Map<String, Direction> map3 = {
+    if (getCondition())
+      'left': Direction.left
+    else
+      'right': Direction.right,
+  };
+}
+
+bool getCondition() => true;
+
+enum Direction { left, right }
+''',
+      [
+        lint(132, 14), // map1: Direction.left (key)
+        lint(285, 15), // map2: Direction.right (key)
+        lint(452, 14), // map3 then: Direction.left (value)
+        lint(491, 15), // map3 else: Direction.right (value)
+      ],
+    );
+  }
 }

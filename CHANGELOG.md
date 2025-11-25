@@ -1,10 +1,12 @@
 ## 0.4.3
 
 - Adapt `List` and `Set`.
+- Adapt `Map`.
 - Adapt operator `!=`.
 - Add case `DefaultFormalParameter` ([#8](https://github.com/huanghui1998hhh/prefer_shorthands/issues/8)).
 - Fix case when assignment to `dynamic`, like `<String, dynamic>{}..**['a'] = Foo.a**` ([#11](https://github.com/huanghui1998hhh/prefer_shorthands/issues/11)).
 - Add case `returnStatement` and `returnExpression` ([#9](https://github.com/huanghui1998hhh/prefer_shorthands/issues/9)).
+- Fix case `subtype_prefix_in_supertype_context` (see test file).
 
 ## 0.4.2
 

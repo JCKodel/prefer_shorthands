@@ -28,8 +28,12 @@ class Visitor extends SimpleAstVisitor<void> {
     registry.addArgumentList(rule, this);
     registry.addAssignmentExpression(rule, this);
     registry.addBinaryExpression(rule, this);
+    registry.addConditionalExpression(rule, this);
     registry.addListLiteral(rule, this);
     registry.addSetOrMapLiteral(rule, this);
+    registry.addIfElement(rule, this);
+    registry.addForElement(rule, this);
+    registry.addMapLiteralEntry(rule, this);
     registry.addDefaultFormalParameter(rule, this);
     registry.addReturnStatement(rule, this);
     registry.addExpressionFunctionBody(rule, this);
@@ -131,13 +135,36 @@ class Visitor extends SimpleAstVisitor<void> {
       expression: expression,
       declaredType: switch (node) {
         BinaryExpression(operator: Token(lexeme: '==')) ||
-        BinaryExpression(operator: Token(lexeme: '!=')) ||
         BinaryExpression(
-          operator: Token(lexeme: '??'),
+          operator: Token(lexeme: '!='),
         ) => node.leftOperand.staticType,
+        BinaryExpression(operator: Token(lexeme: '??')) =>
+          // For ?? operator, try to get context type from parent
+          // If in argument position: use parameter type
+          // If in return/assignment: use declared type
+          // Otherwise fallback to left operand type
+          node.correspondingParameter?.type ??
+              node.findDeclaredType() ??
+              node.leftOperand.staticType,
         _ => node.rightOperand.correspondingParameter?.type,
       },
     );
+  }
+
+  @override
+  void visitConditionalExpression(ConditionalExpression node) {
+    final declaredType =
+        node.correspondingParameter?.type ?? node.findDeclaredType();
+    if (declaredType == null) return;
+
+    _checkExpression(node.thenExpression, declaredType);
+    _checkExpression(node.elseExpression, declaredType);
+  }
+
+  void _checkExpression(Expression expression, DartType declaredType) {
+    if (!expression.isDotShorthand) {
+      _checkAndReport(expression: expression, declaredType: declaredType);
+    }
   }
 
   @override
@@ -164,27 +191,23 @@ class Visitor extends SimpleAstVisitor<void> {
 
   @override
   void visitListLiteral(ListLiteral node) {
-    final declaredType = node.getIterableGenericType(IterableType.list);
-    if (declaredType == null) return;
-
-    for (final element in node.elements) {
-      final expression = switch (element) {
-        Expression() => element,
-        _ => null,
-      };
-      if (expression == null) continue;
-      if (expression.isDotShorthand) continue;
-
-      _checkAndReport(expression: expression, declaredType: declaredType);
-    }
+    _checkCollectionElements(node.elements, IterableType.list, node);
   }
 
   @override
   void visitSetOrMapLiteral(SetOrMapLiteral node) {
-    final declaredType = node.getIterableGenericType(IterableType.set);
+    _checkCollectionElements(node.elements, IterableType.set, node);
+  }
+
+  void _checkCollectionElements(
+    Iterable<CollectionElement> elements,
+    IterableType iterableType,
+    TypedLiteral literal,
+  ) {
+    final declaredType = literal.getIterableGenericType(iterableType);
     if (declaredType == null) return;
 
-    for (final element in node.elements) {
+    for (final element in elements) {
       final expression = switch (element) {
         Expression() => element,
         _ => null,
@@ -217,31 +240,24 @@ class Visitor extends SimpleAstVisitor<void> {
   void visitReturnStatement(ReturnStatement node) {
     final expression = node.expression;
     if (expression == null) return;
-    if (expression.isDotShorthand) return;
-
-    final functionDeclaration = node
-        .thisOrAncestorOfType<FunctionDeclaration>();
-    if (functionDeclaration == null) return;
-
-    final returnType = functionDeclaration.returnType;
-    if (returnType == null) return;
-
-    _checkAndReport(expression: expression, declaredType: returnType.type);
+    _checkExpressionWithReturnType(expression, node);
   }
 
   @override
   void visitExpressionFunctionBody(ExpressionFunctionBody node) {
-    final expression = node.expression;
+    _checkExpressionWithReturnType(node.expression, node);
+  }
+
+  void _checkExpressionWithReturnType(Expression expression, AstNode node) {
     if (expression.isDotShorthand) return;
 
-    final functionDeclaration = node
-        .thisOrAncestorOfType<FunctionDeclaration>();
-    if (functionDeclaration == null) return;
-
-    final returnType = functionDeclaration.returnType;
+    final returnType = node
+        .thisOrAncestorOfType<FunctionDeclaration>()
+        ?.returnType
+        ?.type;
     if (returnType == null) return;
 
-    _checkAndReport(expression: expression, declaredType: returnType.type);
+    _checkAndReport(expression: expression, declaredType: returnType);
   }
 
   @override
@@ -253,6 +269,52 @@ class Visitor extends SimpleAstVisitor<void> {
     if (declaredType == null) return;
 
     _checkAndReport(expression: expression, declaredType: declaredType);
+  }
+
+  @override
+  void visitIfElement(IfElement node) {
+    final declaredType = node.getCollectionElementType();
+    if (declaredType == null) return;
+
+    _checkCollectionElement(node.thenElement, declaredType);
+    if (node.elseElement != null) {
+      _checkCollectionElement(node.elseElement!, declaredType);
+    }
+  }
+
+  @override
+  void visitForElement(ForElement node) {
+    final declaredType = node.getCollectionElementType();
+    if (declaredType == null) return;
+
+    _checkCollectionElement(node.body, declaredType);
+  }
+
+  void _checkCollectionElement(
+    CollectionElement element,
+    DartType declaredType,
+  ) {
+    if (element is Expression && !element.isDotShorthand) {
+      _checkAndReport(expression: element, declaredType: declaredType);
+    }
+  }
+
+  @override
+  void visitMapLiteralEntry(MapLiteralEntry node) {
+    final mapLiteral = node.thisOrAncestorOfType<SetOrMapLiteral>();
+    if (mapLiteral == null || mapLiteral.isSet) return;
+
+    // Check key
+    final keyType = mapLiteral.getIterableGenericType(IterableType.mapKey);
+    if (keyType != null) {
+      _checkExpression(node.key, keyType);
+    }
+
+    // Check value
+    final valueType = mapLiteral.getIterableGenericType(IterableType.mapValue);
+    if (valueType != null) {
+      _checkExpression(node.value, valueType);
+    }
   }
 
   /// Check same name constructor is redirected constructor
