@@ -2,7 +2,8 @@
 
 - Adapt `List` and `Set`.
 - Adapt operator `!=`.
-- Add case `DefaultFormalParameter`.
+- Add case `DefaultFormalParameter` ([#8](https://github.com/huanghui1998hhh/prefer_shorthands/issues/8)).
+- Fix case when assignment to `dynamic`, like `<String, dynamic>{}..**['a'] = Foo.a**` ([#11](https://github.com/huanghui1998hhh/prefer_shorthands/issues/11)).
 
 ## 0.4.2
 

@@ -96,10 +96,8 @@ class Visitor extends SimpleAstVisitor<void> {
     final expression = node.rightHandSide;
     if (expression.isDotShorthand) return;
 
-    final declaredType = switch (node.leftHandSide) {
-      SimpleIdentifier(element: VariableElement(type: final type)) => type,
-      _ => null,
-    };
+    final declaredType = node.writeType;
+    if (declaredType == null) return;
 
     _checkAndReport(expression: expression, declaredType: declaredType);
   }
