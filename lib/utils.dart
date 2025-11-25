@@ -99,3 +99,28 @@ extension TypedLiteralExtension on TypedLiteral {
 }
 
 enum IterableType { set, list }
+
+extension AstNodeExtension on AstNode {
+  DartType? findDeclaredType() {
+    final varDecl = thisOrAncestorOfType<VariableDeclaration>();
+    if (varDecl != null) {
+      return switch (varDecl.parent) {
+        VariableDeclarationList(type: NamedType(:final type)) => type,
+        _ => null,
+      };
+    }
+
+    final returnType = thisOrAncestorOfType<FunctionDeclaration>()?.returnType;
+    if (returnType != null) {
+      return returnType.type;
+    }
+
+    final getterReturnType =
+        thisOrAncestorOfType<MethodDeclaration>()?.returnType;
+    if (getterReturnType != null) {
+      return getterReturnType.type;
+    }
+
+    return null;
+  }
+}

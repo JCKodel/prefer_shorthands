@@ -31,6 +31,9 @@ class Visitor extends SimpleAstVisitor<void> {
     registry.addListLiteral(rule, this);
     registry.addSetOrMapLiteral(rule, this);
     registry.addDefaultFormalParameter(rule, this);
+    registry.addReturnStatement(rule, this);
+    registry.addExpressionFunctionBody(rule, this);
+    registry.addSwitchExpressionCase(rule, this);
   }
 
   /// [canModifyDeclaredType] is true when the declared type can be modified,
@@ -205,6 +208,48 @@ class Visitor extends SimpleAstVisitor<void> {
     };
 
     // not same as `variableDeclaration`, function parameter won't do type inference
+    if (declaredType == null) return;
+
+    _checkAndReport(expression: expression, declaredType: declaredType);
+  }
+
+  @override
+  void visitReturnStatement(ReturnStatement node) {
+    final expression = node.expression;
+    if (expression == null) return;
+    if (expression.isDotShorthand) return;
+
+    final functionDeclaration = node
+        .thisOrAncestorOfType<FunctionDeclaration>();
+    if (functionDeclaration == null) return;
+
+    final returnType = functionDeclaration.returnType;
+    if (returnType == null) return;
+
+    _checkAndReport(expression: expression, declaredType: returnType.type);
+  }
+
+  @override
+  void visitExpressionFunctionBody(ExpressionFunctionBody node) {
+    final expression = node.expression;
+    if (expression.isDotShorthand) return;
+
+    final functionDeclaration = node
+        .thisOrAncestorOfType<FunctionDeclaration>();
+    if (functionDeclaration == null) return;
+
+    final returnType = functionDeclaration.returnType;
+    if (returnType == null) return;
+
+    _checkAndReport(expression: expression, declaredType: returnType.type);
+  }
+
+  @override
+  void visitSwitchExpressionCase(SwitchExpressionCase node) {
+    final expression = node.expression;
+    if (expression.isDotShorthand) return;
+
+    final declaredType = node.findDeclaredType();
     if (declaredType == null) return;
 
     _checkAndReport(expression: expression, declaredType: declaredType);
