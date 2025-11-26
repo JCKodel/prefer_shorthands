@@ -2,6 +2,8 @@
 
 - Remove a output statements that may cause the analyze server to crash.
 - Adapt `getter` [#16](https://github.com/huanghui1998hhh/prefer_shorthands/issues/16).
+- Adapt `Record` [#15](https://github.com/huanghui1998hhh/prefer_shorthands/issues/15).
+- Enhance return type check for `Iterable`/`Map`/`Record`.
 
 ## 0.4.3
 

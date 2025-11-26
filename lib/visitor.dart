@@ -24,6 +24,7 @@ class Visitor extends SimpleAstVisitor<void> {
     AbstractAnalysisRule rule,
   ) {
     registry.addVariableDeclaration(rule, this);
+    registry.addPatternVariableDeclaration(rule, this);
     registry.addConstantPattern(rule, this);
     registry.addArgumentList(rule, this);
     registry.addAssignmentExpression(rule, this);
@@ -32,6 +33,7 @@ class Visitor extends SimpleAstVisitor<void> {
     registry.addConditionalExpression(rule, this);
     registry.addListLiteral(rule, this);
     registry.addSetOrMapLiteral(rule, this);
+    registry.addRecordLiteral(rule, this);
     registry.addIfElement(rule, this);
     registry.addForElement(rule, this);
     registry.addMapLiteralEntry(rule, this);
@@ -86,9 +88,16 @@ class Visitor extends SimpleAstVisitor<void> {
     if (expression.isDotShorthand) return;
 
     final variableList = node.thisOrAncestorOfType<VariableDeclarationList>();
-    final hasExplicitType = variableList?.type != null;
+    final variableListType = variableList?.type;
+    final hasExplicitType = variableListType != null;
 
     if (!hasExplicitType && !settings.convertImplicitDeclaration) {
+      return;
+    }
+
+    if (expression is RecordLiteral &&
+        variableListType is RecordTypeAnnotation) {
+      _checkRecordLiteralWithTypeAnnotation(expression, variableListType);
       return;
     }
 
@@ -97,6 +106,103 @@ class Visitor extends SimpleAstVisitor<void> {
       declaredType: node.declaredFragment?.element.type,
       canModifyDeclaredType: true,
     );
+  }
+
+  void _checkRecordLiteralWithTypeAnnotation(
+    RecordLiteral literal,
+    RecordTypeAnnotation typeAnnotation,
+  ) {
+    final positionalFields = typeAnnotation.positionalFields;
+    final namedFields = typeAnnotation.namedFields;
+
+    var literalIndex = 0;
+    for (
+      var i = 0;
+      i < positionalFields.length && literalIndex < literal.fields.length;
+      i++
+    ) {
+      final field = positionalFields[i];
+      final declaredType = field.type.type;
+      if (declaredType == null) continue;
+
+      while (literalIndex < literal.fields.length &&
+          literal.fields[literalIndex] is NamedExpression) {
+        literalIndex++;
+      }
+
+      if (literalIndex >= literal.fields.length) break;
+
+      final literalField = literal.fields[literalIndex];
+      final expression = switch (literalField) {
+        NamedExpression(:final expression) => expression,
+        _ => literalField,
+      };
+
+      if (!expression.isDotShorthand) {
+        _checkAndReport(expression: expression, declaredType: declaredType);
+      }
+
+      literalIndex++;
+    }
+
+    if (namedFields != null) {
+      for (final field in namedFields.fields) {
+        final fieldName = field.name.lexeme;
+        final declaredType = field.type.type;
+        if (declaredType == null) continue;
+
+        for (final literalField in literal.fields) {
+          if (literalField is NamedExpression &&
+              literalField.name.label.name == fieldName) {
+            final expression = literalField.expression;
+            if (!expression.isDotShorthand) {
+              _checkAndReport(
+                expression: expression,
+                declaredType: declaredType,
+              );
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  @override
+  void visitPatternVariableDeclaration(PatternVariableDeclaration node) {
+    final literal = node.expression;
+    if (literal is! RecordLiteral) return;
+
+    final pattern = switch (node.pattern) {
+      final RecordPattern e => e,
+      _ => null,
+    };
+    if (pattern == null) return;
+
+    final patternFieldsLength = pattern.fields.length;
+    final literalFieldsLength = literal.fields.length;
+    if (patternFieldsLength != literalFieldsLength) return;
+
+    for (var i = 0; i < patternFieldsLength; i++) {
+      final patternField = pattern.fields[i];
+      final literalField = literal.fields[i];
+
+      final declaredType = switch (patternField.pattern) {
+        WildcardPattern(type: final type?) => type.type,
+        DeclaredVariablePattern(type: final type?) => type.type,
+        _ => null,
+      };
+      if (declaredType == null) continue;
+
+      final expression = switch (literalField) {
+        NamedExpression(:final expression) => expression,
+        _ => literalField,
+      };
+
+      if (!expression.isDotShorthand) {
+        _checkAndReport(expression: expression, declaredType: declaredType);
+      }
+    }
   }
 
   @override
@@ -217,6 +323,46 @@ class Visitor extends SimpleAstVisitor<void> {
       if (expression.isDotShorthand) continue;
 
       _checkAndReport(expression: expression, declaredType: declaredType);
+    }
+  }
+
+  @override
+  void visitRecordLiteral(RecordLiteral node) {
+    final recordType = () {
+      final paramType = node.correspondingParameter?.type;
+      if (paramType is RecordType) return paramType;
+
+      final declaredType = node.findDeclaredType();
+      if (declaredType is RecordType) return declaredType;
+
+      return null;
+    }();
+    if (recordType == null) return;
+
+    var positionalIndex = 0;
+    for (final field in node.fields) {
+      final expression = switch (field) {
+        NamedExpression(:final expression) => expression,
+        _ => field,
+      };
+
+      if (expression.isDotShorthand) {
+        if (field is! NamedExpression) positionalIndex++;
+        continue;
+      }
+
+      // Get the expected type for this field
+      final fieldName = field is NamedExpression ? field.name.label.name : null;
+      final fieldType = recordType.getFieldTypeByNameOrIndex(
+        positionalIndex,
+        fieldName,
+      );
+
+      if (fieldType != null) {
+        _checkAndReport(expression: expression, declaredType: fieldType);
+      }
+
+      if (field is! NamedExpression) positionalIndex++;
     }
   }
 
