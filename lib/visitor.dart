@@ -27,6 +27,7 @@ class Visitor extends SimpleAstVisitor<void> {
     registry.addConstantPattern(rule, this);
     registry.addArgumentList(rule, this);
     registry.addAssignmentExpression(rule, this);
+    registry.addMethodDeclaration(rule, this);
     registry.addBinaryExpression(rule, this);
     registry.addConditionalExpression(rule, this);
     registry.addListLiteral(rule, this);
@@ -315,6 +316,22 @@ class Visitor extends SimpleAstVisitor<void> {
     if (valueType != null) {
       _checkExpression(node.value, valueType);
     }
+  }
+
+  @override
+  void visitMethodDeclaration(MethodDeclaration node) {
+    if (!node.isGetter) return;
+
+    final returnType = node.returnType?.type;
+    if (returnType == null) return;
+
+    final expression = switch (node.body) {
+      ExpressionFunctionBody(:final expression) => expression,
+      _ => null,
+    };
+    if (expression == null) return;
+
+    _checkExpression(expression, returnType);
   }
 
   /// Check same name constructor is redirected constructor
