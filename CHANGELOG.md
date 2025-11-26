@@ -1,3 +1,7 @@
+## 0.4.5
+
+- Allow `analyzer9.0`.
+
 ## 0.4.4
 
 - Remove a output statements that may cause the analyze server to crash.
