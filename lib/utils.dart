@@ -58,9 +58,8 @@ extension ExpressionExtension on Expression {
 
 extension TypedLiteralExtension on TypedLiteral {
   DartType? getIterableGenericType(IterableType iterableType) {
-    // Handle type arguments from literal itself
-    // For list/set: `<String>[]` or `<String>{}`
-    // For map: `<String, Direction>{}`
+    // 1. Check explicit type arguments on the literal itself
+    // e.g., `<String>[]` or `<Direction, String>{}`
     if (typeArguments case TypeArgumentList(
       :final arguments,
     ) when arguments.isNotEmpty) {
@@ -73,8 +72,27 @@ extension TypedLiteralExtension on TypedLiteral {
       };
     }
 
-    // Then resolve parent
-    final declaredType = switch (parent) {
+    // 2. Try to get type from context (parameter, return type, etc.)
+    final contextType = _getContextType();
+    if (contextType != null) {
+      return _extractTypeArgument(contextType, iterableType);
+    }
+
+    return null;
+  }
+
+  InterfaceType? _getContextType() {
+    // Try correspondingParameter (for arguments)
+    // TypedLiteral is always an Expression
+    final param = correspondingParameter?.type;
+    if (param is InterfaceType) return param;
+
+    // Try findDeclaredType (for return values, assignments, etc.)
+    final declaredType = findDeclaredType();
+    if (declaredType is InterfaceType) return declaredType;
+
+    // Fallback to parent-based resolution
+    return switch (parent) {
       Declaration(
         parent: VariableDeclarationList(
           type: NamedType(:final InterfaceType type),
@@ -89,18 +107,22 @@ extension TypedLiteralExtension on TypedLiteral {
         type,
       _ => null,
     };
+  }
 
-    if (declaredType == null) return null;
-
+  DartType? _extractTypeArgument(
+    InterfaceType contextType,
+    IterableType iterableType,
+  ) {
+    // Check if the context type matches the expected collection type
     final isMatchingType = switch (iterableType) {
-      IterableType.set => declaredType.isDartCoreSet,
-      IterableType.list => declaredType.isDartCoreList,
-      IterableType.mapValue ||
-      IterableType.mapKey => declaredType.isDartCoreMap,
+      IterableType.set => contextType.isDartCoreSet,
+      IterableType.list => contextType.isDartCoreList,
+      IterableType.mapValue || IterableType.mapKey => contextType.isDartCoreMap,
     };
     if (!isMatchingType) return null;
 
-    return switch ((iterableType, declaredType.typeArguments)) {
+    // Extract the appropriate type argument
+    return switch ((iterableType, contextType.typeArguments)) {
       (IterableType.mapValue, [_, final valueType]) => valueType,
       (IterableType.mapKey, [final keyType, _]) => keyType,
       (IterableType.list || IterableType.set, [final elementType]) =>
@@ -145,6 +167,25 @@ extension AstNodeExtension on AstNode {
     final setLiteral = thisOrAncestorOfType<SetOrMapLiteral>();
     if (setLiteral != null && setLiteral.isSet) {
       return setLiteral.getIterableGenericType(IterableType.set);
+    }
+
+    return null;
+  }
+}
+
+extension RecordTypeExtension on RecordType {
+  DartType? getFieldTypeByNameOrIndex(int index, String? fieldName) {
+    if (fieldName != null) {
+      for (final field in namedFields) {
+        if (field.name == fieldName) {
+          return field.type;
+        }
+      }
+      return null;
+    }
+
+    if (index < positionalFields.length) {
+      return positionalFields[index].type;
     }
 
     return null;

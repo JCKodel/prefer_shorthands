@@ -433,4 +433,63 @@ class B extends A {
       [lint(57, 14), lint(182, 14)],
     );
   }
+
+  /// https://github.com/huanghui1998hhh/prefer_shorthands/issues/15
+  void test_collections_as_return_values() async {
+    await assertDiagnostics(
+      '''
+List<Direction> getList() {
+  return [Direction.left, Direction.right];
+}
+
+List<Direction> getList2() => [Direction.up, Direction.down];
+
+Set<Direction> getSet() {
+  return {Direction.left, Direction.right};
+}
+
+Map<Direction, String> getMap() {
+  return {Direction.left: 'left', Direction.right: 'right'};
+}
+
+enum Direction { left, right, up, down }
+''',
+      [
+        lint(38, 14), // getList: Direction.left
+        lint(54, 15), // getList: Direction.right
+        lint(106, 12), // getList2: Direction.up
+        lint(120, 14), // getList2: Direction.down
+        lint(174, 14), // getSet: Direction.left
+        lint(190, 15), // getSet: Direction.right
+        lint(255, 14), // getMap key: Direction.left
+        lint(279, 15), // getMap key: Direction.right
+      ],
+    );
+  }
+
+  void test_record_literals() async {
+    await assertDiagnostics(
+      '''
+(Direction, String) getRecord() => (Direction.up, 'up');
+
+void display((Direction, Direction) record) {}
+
+void main() {
+  final (Direction, String) record1 = (Direction.left, 'left');
+  display((Direction.left, Direction.right));
+}
+
+enum Direction { left, right, up, down }
+''',
+      [
+        lint(36, 12), // getRecord: Direction.up
+        lint(
+          159,
+          14,
+        ), // record1 with type annotation: Direction.left (now working!)
+        lint(195, 14), // display arg: Direction.left
+        lint(211, 15), // display arg: Direction.right
+      ],
+    );
+  }
 }
