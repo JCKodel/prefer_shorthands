@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:analysis_server_plugin/plugin.dart';
 import 'package:analysis_server_plugin/registry.dart';
 import 'package:analyzer/analysis_rule/analysis_rule.dart';
@@ -60,7 +58,6 @@ class PreferShorthandsRule extends AnalysisRule {
       plugin.settings = Settings.loadFromAnalysisOptions(
         context.package?.root.path,
       );
-      stderr.writeln('[Prefer Shorthands] Settings: ${plugin.settings}');
     }
 
     Visitor(this, context).registerNodeProcessors(registry, this);

@@ -412,4 +412,25 @@ enum Direction { left, right }
       ],
     );
   }
+
+  /// https://github.com/huanghui1998hhh/prefer_shorthands/issues/16
+  void test_getter() async {
+    await assertDiagnostics(
+      '''
+enum Direction {left, right}
+
+Direction get direction => Direction.left;
+
+sealed class A {
+  Direction get direction;
+}
+
+class B extends A {
+  @override
+  Direction get direction => Direction.left; // should recommend .left
+}
+''',
+      [lint(57, 14), lint(182, 14)],
+    );
+  }
 }

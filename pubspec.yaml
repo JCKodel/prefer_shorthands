@@ -1,7 +1,7 @@
 name: prefer_shorthands
 description: An analyzer plugin that suggests using Dart's dot shorthand syntax.
 homepage: https://github.com/huanghui1998hhh/prefer_shorthands
-version: 0.4.3
+version: 0.4.4
 
 keywords:
   - dart

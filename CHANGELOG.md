@@ -1,3 +1,8 @@
+## 0.4.4
+
+- Remove a output statements that may cause the analyze server to crash.
+- Adapt `getter` [#16](https://github.com/huanghui1998hhh/prefer_shorthands/issues/16).
+
 ## 0.4.3
 
 - Adapt `List` and `Set`.
