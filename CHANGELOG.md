@@ -1,3 +1,7 @@
+## 0.4.6
+
+- Adapt return `Future`.
+
 ## 0.4.5
 
 - Allow `analyzer9.0`.
