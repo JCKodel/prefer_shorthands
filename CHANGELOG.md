@@ -1,6 +1,6 @@
 ## 0.4.6
 
-- Adapt return `Future`.
+- Adapt return `Future` [#19](https://github.com/huanghui1998hhh/prefer_shorthands/issues/19).
 
 ## 0.4.5
 
