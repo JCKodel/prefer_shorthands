@@ -404,7 +404,10 @@ class Visitor extends SimpleAstVisitor<void> {
         ?.type;
     if (returnType == null) return;
 
-    _checkAndReport(expression: expression, declaredType: returnType);
+    // For async functions, unwrap Future<T> to get T
+    final declaredType = returnType.unwrapFutureOr();
+
+    _checkAndReport(expression: expression, declaredType: declaredType);
   }
 
   @override

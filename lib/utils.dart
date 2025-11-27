@@ -7,6 +7,15 @@ extension InterfaceElementExtension on InterfaceElement {
       constructors.where((c) => c.name == constructorName).firstOrNull;
 }
 
+extension DartTypeExtension on DartType {
+  DartType unwrapFutureOr() => switch (this) {
+    InterfaceType(typeArguments: [final type])
+        when isDartAsyncFuture || isDartAsyncFutureOr =>
+      type,
+    _ => this,
+  };
+}
+
 extension ExpressionExtension on Expression {
   String? get constructorNameIfInstanceCreation => switch (this) {
     InstanceCreationExpression(

@@ -492,4 +492,31 @@ enum Direction { left, right, up, down }
       ],
     );
   }
+
+  /// https://github.com/huanghui1998hhh/prefer_shorthands/issues/19
+  void test_async_return() async {
+    await assertDiagnostics(
+      '''
+Direction getDirection() {
+  return Direction.left;
+}
+
+Direction getDirection2() => Direction.right;
+
+Future<Direction> getDirectionAsync() async {
+  return Direction.up;
+}
+
+Future<Direction> getDirectionAsync2() async => Direction.down;
+
+enum Direction { left, right, up, down }
+''',
+      [
+        lint(36, 14), // getDirection: Direction.left
+        lint(84, 15), // getDirection2: Direction.right
+        lint(157, 12), // getDirectionAsync: Direction.up (async unwraps Future)
+        lint(222, 14), // getDirectionAsync2: Direction.down (async expression)
+      ],
+    );
+  }
 }
