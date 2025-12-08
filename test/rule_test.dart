@@ -519,4 +519,65 @@ enum Direction { left, right, up, down }
       ],
     );
   }
+
+  /// https://github.com/huanghui1998hhh/prefer_shorthands/issues/21
+  /// Factory constructors with body should NOT trigger warning
+  /// Redirecting factory constructors SHOULD trigger warning
+  void test_21_factory_constructors() async {
+    await assertDiagnostics(
+      '''
+final Result a = Result.success('Entity created');
+final Result b = Result.failure('Entity created');
+final Result c = Result.networkFailure('Entity created');
+
+class Result {
+  bool success;
+  String? message;
+  String? error;
+  List<dynamic>? data;
+  Object? object;
+
+  Result({
+    required this.success,
+    this.message,
+    this.error,
+    this.data,
+    this.object,
+  });
+
+  factory Result.success(
+    String? message, {
+    List<dynamic>? data,
+    Object? object,
+  }) {
+    return Result(success: true, message: message, data: data, object: object);
+  }
+
+  factory Result.failure(String? error, {List<dynamic>? data, Object? object}) =
+      FailureResult;
+
+  factory Result.networkFailure(
+    String? error, {
+    List<dynamic>? data,
+    Object? object,
+  }) = FailureResult.networt;
+}
+
+class FailureResult extends Result {
+  FailureResult(String? error, {super.data, super.object})
+    : super(success: false, error: error);
+
+  FailureResult.networt(String? error, {super.data, super.object})
+    : super(success: false, error: error);
+}
+''',
+      [
+        // Result.success has body -> NO warning
+        // Result.failure redirects to FailureResult -> warning
+        lint(68, 32),
+        // Result.networkFailure redirects to FailureResult.networt -> warning
+        lint(119, 39),
+      ],
+    );
+  }
 }

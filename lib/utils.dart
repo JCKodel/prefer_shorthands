@@ -7,6 +7,23 @@ extension InterfaceElementExtension on InterfaceElement {
       constructors.where((c) => c.name == constructorName).firstOrNull;
 }
 
+extension ConstructorElementExtension on ConstructorElement? {
+  /// Returns true if this is a factory constructor with a body
+  /// (not redirecting and not external), which cannot use dot shorthand.
+  ///
+  /// Examples:
+  /// - `factory Result.success(...) { return Result(...); }` -> true (has body)
+  /// - `factory A.b() = B.b;` -> false (redirecting)
+  /// - `external const factory String.fromEnvironment(...)` -> false (external)
+  bool get isNonRedirectingBodyFactory {
+    final self = this;
+    if (self == null) return false;
+    return self.isFactory &&
+        self.redirectedConstructor == null &&
+        !self.isExternal;
+  }
+}
+
 extension DartTypeExtension on DartType {
   DartType unwrapFutureOr() => switch (this) {
     InterfaceType(typeArguments: [final type])
@@ -34,11 +51,16 @@ extension ExpressionExtension on Expression {
 
   (InterfaceElement, DartType)? getShorthandPrefixElement() => switch (this) {
     InstanceCreationExpression(
-      constructorName: ConstructorName(:final name),
-      staticType: InterfaceType(:final element, :final extensionTypeErasure),
+      constructorName: ConstructorName(:final name, :final element),
+      staticType: InterfaceType(
+        element: final typeElement,
+        :final extensionTypeErasure,
+      ),
     )
-        when name?.name != null && name?.name != 'new' =>
-      (element, extensionTypeErasure),
+        when name?.name != null &&
+            name?.name != 'new' &&
+            !element.isNonRedirectingBodyFactory =>
+      (typeElement, extensionTypeErasure),
     PropertyAccess(target: SimpleIdentifier(element: InterfaceElement e)) => (
       e,
       e.thisType,
