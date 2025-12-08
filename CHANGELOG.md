@@ -1,3 +1,7 @@
+## 0.4.7
+
+- Fix `factory constructors` with **body return** displayed warning that should not appeared.  [#21](https://github.com/huanghui1998hhh/prefer_shorthands/issues/21).
+
 ## 0.4.6
 
 - Adapt return `Future` [#19](https://github.com/huanghui1998hhh/prefer_shorthands/issues/19).
