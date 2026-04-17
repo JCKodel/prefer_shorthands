@@ -165,6 +165,35 @@ extension TypedLiteralExtension on TypedLiteral {
 
 enum IterableType { set, list, mapValue, mapKey }
 
+bool matchesGlobPattern(String pattern, String filePath) {
+  final path = filePath.replaceAll('\\', '/');
+  var regexStr = '';
+  var i = 0;
+  final p = pattern.replaceAll('\\', '/');
+  while (i < p.length) {
+    final ch = p[i];
+    if (ch == '*' && i + 1 < p.length && p[i + 1] == '*') {
+      if (i + 2 < p.length && p[i + 2] == '/') {
+        regexStr += '(?:.+/)?';
+        i += 3;
+      } else {
+        regexStr += '.*';
+        i += 2;
+      }
+    } else if (ch == '*') {
+      regexStr += '[^/]*';
+      i++;
+    } else if (RegExp(r'[.+^${}()|[\]]').hasMatch(ch)) {
+      regexStr += '\\$ch';
+      i++;
+    } else {
+      regexStr += ch;
+      i++;
+    }
+  }
+  return RegExp('^$regexStr\$').hasMatch(path);
+}
+
 extension AstNodeExtension on AstNode {
   DartType? findDeclaredType() {
     final varDecl = thisOrAncestorOfType<VariableDeclaration>();

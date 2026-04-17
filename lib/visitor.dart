@@ -78,6 +78,15 @@ class Visitor extends SimpleAstVisitor<void> {
       }
     }
 
+    final filePath = context.currentUnit?.file.path;
+    if (filePath != null &&
+        plugin.settings.isExcluded(
+          filePath,
+          context.package?.root.path ?? '',
+        )) {
+      return;
+    }
+
     rule.reportAtNode(expression);
   }
 
