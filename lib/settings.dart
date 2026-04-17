@@ -16,6 +16,7 @@ class Settings {
     }
     final contents = file.readAsStringSync();
     final yaml = loadYaml(contents);
+    if (yaml is! YamlMap) return const Settings();
 
     final analyzerSection = yaml['analyzer'];
     final excludePatterns = <String>[];

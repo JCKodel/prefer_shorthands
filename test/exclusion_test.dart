@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:prefer_shorthands/settings.dart';
 import 'package:prefer_shorthands/utils.dart';
 import 'package:test/test.dart';
@@ -51,6 +53,73 @@ void main() {
         matchesGlobPattern('**/*.g.dart', r'lib\src\models.g.dart'),
         isTrue,
       );
+    });
+  });
+
+  group('Settings.loadFromAnalysisOptions', () {
+    late Directory tempDir;
+
+    setUp(() => tempDir = Directory.systemTemp.createTempSync('prefer_shorthands_test_'));
+    tearDown(() => tempDir.deleteSync(recursive: true));
+
+    void writeOptions(String content) =>
+        File('${tempDir.path}/analysis_options.yaml').writeAsStringSync(content);
+
+    test('reads analyzer.exclude patterns', () {
+      writeOptions('''
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "lib/generated/**"
+''');
+      final settings = Settings.loadFromAnalysisOptions(tempDir.path);
+      expect(settings.excludePatterns, ['**/*.g.dart', 'lib/generated/**']);
+    });
+
+    test('works without prefer_shorthands section', () {
+      writeOptions('''
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+''');
+      final settings = Settings.loadFromAnalysisOptions(tempDir.path);
+      expect(settings.excludePatterns, ['**/*.g.dart']);
+      expect(settings.convertImplicitDeclaration, isFalse);
+    });
+
+    test('combines analyzer.exclude with prefer_shorthands options', () {
+      writeOptions('''
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+
+prefer_shorthands:
+  convert_implicit_declaration: true
+''');
+      final settings = Settings.loadFromAnalysisOptions(tempDir.path);
+      expect(settings.excludePatterns, ['**/*.g.dart']);
+      expect(settings.convertImplicitDeclaration, isTrue);
+    });
+
+    test('returns empty patterns when no analyzer.exclude section', () {
+      writeOptions('''
+prefer_shorthands:
+  convert_implicit_declaration: true
+''');
+      final settings = Settings.loadFromAnalysisOptions(tempDir.path);
+      expect(settings.excludePatterns, isEmpty);
+    });
+
+    test('returns default settings when file does not exist', () {
+      final settings = Settings.loadFromAnalysisOptions(tempDir.path);
+      expect(settings.excludePatterns, isEmpty);
+      expect(settings.convertImplicitDeclaration, isFalse);
+    });
+
+    test('returns default settings when file is empty', () {
+      writeOptions('');
+      final settings = Settings.loadFromAnalysisOptions(tempDir.path);
+      expect(settings.excludePatterns, isEmpty);
     });
   });
 
