@@ -40,9 +40,11 @@ class Settings {
     );
   }
 
-  const Settings({bool? convertImplicitDeclaration, List<String>? excludePatterns})
-    : convertImplicitDeclaration = convertImplicitDeclaration ?? false,
-      excludePatterns = excludePatterns ?? const [];
+  const Settings({
+    bool? convertImplicitDeclaration,
+    List<String>? excludePatterns,
+  }) : convertImplicitDeclaration = convertImplicitDeclaration ?? false,
+       excludePatterns = excludePatterns ?? const [];
 
   final bool convertImplicitDeclaration;
   final List<String> excludePatterns;

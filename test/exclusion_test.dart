@@ -8,13 +8,19 @@ void main() {
   group('matchesGlobPattern', () {
     test('matches **/*.g.dart in any directory', () {
       expect(matchesGlobPattern('**/*.g.dart', 'lib/models.g.dart'), isTrue);
-      expect(matchesGlobPattern('**/*.g.dart', 'lib/src/models.g.dart'), isTrue);
+      expect(
+        matchesGlobPattern('**/*.g.dart', 'lib/src/models.g.dart'),
+        isTrue,
+      );
       expect(matchesGlobPattern('**/*.g.dart', 'models.g.dart'), isTrue);
     });
 
     test('does not match non-.g.dart files', () {
       expect(matchesGlobPattern('**/*.g.dart', 'lib/models.dart'), isFalse);
-      expect(matchesGlobPattern('**/*.g.dart', 'lib/models.g.dart.bak'), isFalse);
+      expect(
+        matchesGlobPattern('**/*.g.dart', 'lib/models.g.dart.bak'),
+        isFalse,
+      );
     });
 
     test('matches directory wildcard pattern', () {
@@ -59,11 +65,16 @@ void main() {
   group('Settings.loadFromAnalysisOptions', () {
     late Directory tempDir;
 
-    setUp(() => tempDir = Directory.systemTemp.createTempSync('prefer_shorthands_test_'));
+    setUp(
+      () => tempDir = Directory.systemTemp.createTempSync(
+        'prefer_shorthands_test_',
+      ),
+    );
     tearDown(() => tempDir.deleteSync(recursive: true));
 
-    void writeOptions(String content) =>
-        File('${tempDir.path}/analysis_options.yaml').writeAsStringSync(content);
+    void writeOptions(String content) => File(
+      '${tempDir.path}/analysis_options.yaml',
+    ).writeAsStringSync(content);
 
     test('reads analyzer.exclude patterns', () {
       writeOptions('''
@@ -126,12 +137,18 @@ prefer_shorthands:
   group('Settings.isExcluded', () {
     test('excludes file matching pattern', () {
       final settings = Settings(excludePatterns: ['**/*.g.dart']);
-      expect(settings.isExcluded('/project/lib/model.g.dart', '/project'), isTrue);
+      expect(
+        settings.isExcluded('/project/lib/model.g.dart', '/project'),
+        isTrue,
+      );
     });
 
     test('does not exclude non-matching file', () {
       final settings = Settings(excludePatterns: ['**/*.g.dart']);
-      expect(settings.isExcluded('/project/lib/model.dart', '/project'), isFalse);
+      expect(
+        settings.isExcluded('/project/lib/model.dart', '/project'),
+        isFalse,
+      );
     });
 
     test('excludes nested file matching pattern', () {
@@ -144,7 +161,10 @@ prefer_shorthands:
 
     test('returns false when excludePatterns is empty', () {
       const settings = Settings();
-      expect(settings.isExcluded('/project/lib/model.g.dart', '/project'), isFalse);
+      expect(
+        settings.isExcluded('/project/lib/model.g.dart', '/project'),
+        isFalse,
+      );
     });
 
     test('works when rootPath is empty', () {
