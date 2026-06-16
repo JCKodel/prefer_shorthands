@@ -33,6 +33,26 @@ extension DartTypeExtension on DartType {
   };
 }
 
+extension RecordLiteralFieldExtension on RecordLiteralField {
+  Expression get expressionValue {
+    if (this case RecordLiteralNamedField(:final fieldExpression)) {
+      return fieldExpression;
+    }
+    if (this is Expression) {
+      return this as Expression;
+    }
+
+    throw StateError('Unexpected record literal field: $runtimeType');
+  }
+
+  bool get isNamedRecordField => this is RecordLiteralNamedField;
+
+  String? get namedRecordFieldName => switch (this) {
+    RecordLiteralNamedField(:final name) => name.lexeme,
+    _ => null,
+  };
+}
+
 extension ExpressionExtension on Expression {
   String? get constructorNameIfInstanceCreation => switch (this) {
     InstanceCreationExpression(
@@ -130,10 +150,8 @@ extension TypedLiteralExtension on TypedLiteral {
         ),
       ) =>
         type,
-      DefaultFormalParameter(
-        parameter: SimpleFormalParameter(
-          type: NamedType(:final InterfaceType type),
-        ),
+      FormalParameterDefaultClause(
+        parent: FormalParameter(type: NamedType(:final InterfaceType type)),
       ) =>
         type,
       _ => null,
